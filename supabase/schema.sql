@@ -50,6 +50,14 @@ create index if not exists journal_submissions_grade_idx
   on public.journal_submissions (week_grade);
 
 -- =============================================================
+-- API role grants (required in addition to RLS policies — without
+-- these the anon role can't even reach the table to be checked).
+-- =============================================================
+grant usage on schema public to anon, authenticated;
+grant insert on public.journal_submissions to anon;
+grant select on public.journal_submissions to authenticated;
+
+-- =============================================================
 -- Row Level Security
 -- =============================================================
 alter table public.journal_submissions enable row level security;
