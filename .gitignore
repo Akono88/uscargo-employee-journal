@@ -1,0 +1,22 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Node (in case anyone runs tooling)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Local env / secrets (we use config.js which is committed,
+# but if anyone ever splits secrets out into .env, ignore them)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts (not used today, future-proofing)
+dist/
+build/
+.cache/

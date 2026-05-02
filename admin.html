@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Cargo · Journal Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --usc-cyan: #00D4FF;
+  --usc-blue-mid: #5B8FE8;
+  --usc-purple: #B344E5;
+  --usc-dark-bg: #1A1A2E;
+  --usc-dark-bg-2: #12121F;
+  --usc-gradient: linear-gradient(90deg, var(--usc-cyan) 0%, var(--usc-purple) 100%);
+  --usc-gradient-soft: linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(179,68,229,0.10) 100%);
+  --usc-line: rgba(91, 143, 232, 0.22);
+  --usc-line-soft: rgba(91, 143, 232, 0.12);
+  --usc-text: #fff;
+  --usc-text-mute: rgba(255,255,255,0.62);
+  --usc-text-faint: rgba(255,255,255,0.38);
+  --usc-font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  --usc-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--usc-dark-bg);
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(0,212,255,0.07), transparent 60%),
+    radial-gradient(800px 600px at -10% 30%, rgba(179,68,229,0.06), transparent 60%);
+  background-attachment: fixed;
+  font-family: var(--usc-font-family);
+  color: var(--usc-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body::before{
+  content:''; position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(91,143,232,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,143,232,0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none; z-index: 0;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(18,18,31,0.78);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--usc-line);
+  padding: 14px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 14px; }
+.nav-mark {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--usc-gradient);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  color: #0a0a14;
+  box-shadow: 0 0 24px rgba(0,212,255,0.25);
+}
+.nav-wordmark { display: flex; flex-direction: column; line-height: 1; }
+.nav-wordmark .top { font-size: 13px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }
+.nav-wordmark .sub { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--usc-purple); margin-top: 4px; }
+
+.btn {
+  font-family: inherit; font-weight: 700; font-size: 12px;
+  letter-spacing: 1px; text-transform: uppercase;
+  border-radius: 4px; cursor: pointer;
+  transition: all .25s ease;
+  border: none; padding: 11px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary { background: var(--usc-gradient); color: #0a0a14; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,212,255,0.35); }
+.btn-ghost {
+  background: transparent; color: var(--usc-text-mute);
+  border: 1px solid var(--usc-line); padding: 9px 16px;
+}
+.btn-ghost:hover { color: #fff; border-color: #fff; }
+
+main {
+  position: relative; z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 32px 100px;
+}
+
+.eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--usc-purple);
+  margin-bottom: 14px;
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--usc-purple); }
+
+.h-display {
+  font-weight: 700; font-size: clamp(32px, 5vw, 56px);
+  line-height: 0.96; text-transform: uppercase;
+  letter-spacing: -0.01em; margin-bottom: 12px;
+}
+.h-display .accent {
+  background: var(--usc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lede {
+  font-size: 14px; line-height: 1.7;
+  color: var(--usc-text-mute);
+  max-width: 680px; margin-bottom: 32px;
+}
+
+/* ==== LOGIN ==== */
+.login-wrap {
+  min-height: 60vh;
+  display: grid; place-items: center;
+  padding: 24px;
+}
+.login-card {
+  width: 100%; max-width: 420px;
+  background: rgba(18,18,31,0.6);
+  border: 1px solid var(--usc-line);
+  border-radius: 12px;
+  padding: 36px;
+}
+.login-card h1 {
+  font-size: 24px; font-weight: 700;
+  margin-bottom: 8px;
+}
+.login-card .lede { font-size: 13px; margin-bottom: 24px; }
+
+.field { margin-bottom: 18px; }
+.field-label {
+  display: block; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--usc-blue-mid); margin-bottom: 8px;
+}
+input[type="email"], input[type="password"], input[type="text"], select {
+  width: 100%; padding: 13px 16px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 6px; color: #fff;
+  font-family: inherit; font-size: 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+input:focus, select:focus {
+  outline: none; border-color: var(--usc-cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.12);
+}
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--usc-cyan) 50%),
+                    linear-gradient(135deg, var(--usc-cyan) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  padding-right: 44px;
+}
+select option { background: var(--usc-dark-bg); color: #fff; }
+
+.error-msg {
+  background: rgba(179,68,229,0.1);
+  border-left: 3px solid var(--usc-purple);
+  padding: 12px 16px; border-radius: 0 6px 6px 0;
+  font-size: 12px; color: var(--usc-text-mute);
+  margin-top: 14px;
+}
+
+/* ==== STATS ==== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: rgba(18,18,31,0.6);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 10px;
+  padding: 22px;
+}
+.stat-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--usc-blue-mid);
+  margin-bottom: 10px;
+}
+.stat-value {
+  font-size: 32px; font-weight: 700;
+  background: var(--usc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: var(--usc-mono);
+}
+.stat-sub {
+  font-size: 11px; color: var(--usc-text-faint);
+  margin-top: 6px;
+}
+
+/* ==== FILTERS ==== */
+.filters {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: rgba(18,18,31,0.5);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 10px;
+  padding: 16px;
+}
+.filters .field { margin-bottom: 0; flex: 1; min-width: 160px; }
+
+/* ==== SUBMISSIONS LIST ==== */
+.list {
+  background: rgba(18,18,31,0.5);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.list-row {
+  display: grid;
+  grid-template-columns: 50px 160px 130px 120px 80px 70px 1fr;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--usc-line-soft);
+  cursor: pointer;
+  transition: background .15s ease;
+  align-items: center;
+  font-size: 12px;
+}
+.list-row:last-child { border-bottom: none; }
+.list-row:hover { background: rgba(0,212,255,0.04); }
+.list-row.head {
+  cursor: default;
+  background: rgba(0,0,0,0.25);
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--usc-blue-mid);
+}
+.list-row.head:hover { background: rgba(0,0,0,0.25); }
+.list-row .id-chip {
+  font-family: var(--usc-mono); font-size: 10px;
+  color: var(--usc-text-faint);
+}
+.list-row .alias { font-weight: 700; }
+.list-row .alias.anon { color: var(--usc-text-faint); font-style: italic; font-weight: 400; }
+.list-row .grade {
+  font-family: var(--usc-mono); font-weight: 700;
+  text-align: center;
+  background: var(--usc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.list-row .nps {
+  font-family: var(--usc-mono);
+  text-align: center;
+}
+.list-empty {
+  padding: 60px 20px; text-align: center;
+  color: var(--usc-text-faint); font-size: 13px;
+}
+
+@media (max-width: 880px) {
+  .list-row { grid-template-columns: 1fr; gap: 4px; padding: 16px; }
+  .list-row.head { display: none; }
+}
+
+/* ==== DETAIL MODAL ==== */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(10,10,20,0.78);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: flex-start; justify-content: center;
+  z-index: 200;
+  padding: 32px 24px;
+  overflow-y: auto;
+}
+.modal-backdrop.show { display: flex; }
+.detail-modal {
+  background: var(--usc-dark-bg);
+  border: 1px solid var(--usc-line);
+  border-radius: 12px;
+  padding: 36px;
+  max-width: 880px;
+  width: 100%;
+  margin: auto;
+  position: relative;
+}
+.detail-modal .close-btn {
+  position: absolute; top: 18px; right: 18px;
+  background: transparent; border: 1px solid var(--usc-line);
+  color: var(--usc-text-mute);
+  width: 32px; height: 32px; border-radius: 6px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 18px;
+}
+.detail-modal .close-btn:hover { color: #fff; border-color: #fff; }
+
+.detail-meta {
+  display: flex; flex-wrap: wrap; gap: 22px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--usc-line-soft);
+  font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; font-weight: 700;
+  color: var(--usc-text-faint);
+}
+.detail-meta b { color: var(--usc-cyan); }
+
+.detail-section {
+  margin-bottom: 28px;
+}
+.detail-section h3 {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--usc-cyan);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--usc-line-soft);
+}
+.detail-q {
+  margin-bottom: 14px;
+}
+.detail-q .q {
+  font-size: 11px; color: var(--usc-blue-mid);
+  font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.detail-q .a {
+  font-size: 13px; line-height: 1.6;
+  color: var(--usc-text);
+  white-space: pre-wrap;
+}
+.detail-q .a.empty { color: var(--usc-text-faint); font-style: italic; }
+.detail-q .a.scale {
+  font-family: var(--usc-mono);
+  background: var(--usc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700; font-size: 18px;
+}
+.detail-q .a.chips span {
+  display: inline-block;
+  padding: 4px 10px; margin: 2px 4px 2px 0;
+  border-radius: 999px;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.3);
+  font-size: 11px; font-weight: 700;
+  color: var(--usc-cyan);
+}
+
+.day-block {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 8px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.day-block .day-h {
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--usc-purple);
+  margin-bottom: 10px;
+}
+
+.toolbar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.toolbar .search {
+  flex: 1; min-width: 220px;
+}
+.count-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--usc-line);
+  background: rgba(0,0,0,0.25);
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--usc-text-mute);
+}
+
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(18,18,31,0.95);
+  border: 1px solid var(--usc-cyan);
+  color: var(--usc-cyan);
+  padding: 12px 20px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  opacity: 0; transition: opacity .3s ease, transform .3s ease;
+  z-index: 300;
+  backdrop-filter: blur(12px);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <div class="nav-mark">USC</div>
+    <div class="nav-wordmark">
+      <span class="top">US Cargo</span>
+      <span class="sub">Journal Admin</span>
+    </div>
+  </div>
+  <div class="nav-right" id="navRight"></div>
+</nav>
+
+<main>
+  <!-- LOGIN VIEW -->
+  <section id="loginView">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="eyebrow">Restricted</div>
+        <h1>Sign in to review</h1>
+        <p class="lede">
+          This dashboard is locked to authenticated users on the US Cargo Supabase project. Use the email and
+          password configured for your admin account.
+        </p>
+        <div class="field">
+          <label class="field-label" for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary" id="loginBtn" style="width:100%;">Sign in &rarr;</button>
+        <div class="error-msg hidden" id="loginError"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section id="dashView" class="hidden">
+    <div class="eyebrow">Step 06 &middot; Review</div>
+    <h1 class="h-display">The <span class="accent">overhaul,</span><br/>raw and unfiltered.</h1>
+    <p class="lede">
+      Each row is one employee's week. Click to read the full submission. Filter by role, date, or grade.
+      Export the whole set when you're ready to discuss.
+    </p>
+
+    <!-- Stats -->
+    <div class="stat-grid" id="statGrid"></div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="field">
+        <label class="field-label" for="filterRole">Role</label>
+        <select id="filterRole">
+          <option value="">All roles</option>
+          <option>Operations</option>
+          <option>Carrier Sales</option>
+          <option>Accounting / Finance</option>
+          <option>After-Hours Ops</option>
+          <option>Technology / IT</option>
+          <option>Leadership / Management</option>
+          <option>Intern</option>
+          <option>Personal Assistant / Admin</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterTenure">Tenure</label>
+        <select id="filterTenure">
+          <option value="">All</option>
+          <option>Less than 6 months</option>
+          <option>6 months &ndash; 1 year</option>
+          <option>1 &ndash; 2 years</option>
+          <option>2 &ndash; 5 years</option>
+          <option>5+ years</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterGrade">Week Grade</label>
+        <select id="filterGrade">
+          <option value="">All grades</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option><option>incomplete</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterSearch">Search text</label>
+        <input type="text" id="filterSearch" placeholder="search inside responses&hellip;" />
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <span class="count-pill"><span id="countText">0 submissions</span></span>
+      <button class="btn btn-ghost" id="refreshBtn">Refresh</button>
+      <button class="btn btn-ghost" id="exportCsvBtn">Export CSV</button>
+      <button class="btn btn-ghost" id="exportJsonBtn">Export JSON</button>
+    </div>
+
+    <!-- List -->
+    <div class="list" id="list">
+      <div class="list-row head">
+        <div>#</div>
+        <div>Submitted</div>
+        <div>Alias</div>
+        <div>Role</div>
+        <div>Grade</div>
+        <div>NPS</div>
+        <div>Top frustration (preview)</div>
+      </div>
+      <div id="listBody"><div class="list-empty">Loading&hellip;</div></div>
+    </div>
+  </section>
+</main>
+
+<!-- Detail modal -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="detail-modal">
+    <button class="close-btn" id="detailClose">&times;</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Done</div>
+
+<script>
+/* =========================================================
+   ADMIN LOGIC
+   ========================================================= */
+const cfg = window.USC_JOURNAL_CONFIG || {};
+const placeholders = ['', 'YOUR-PROJECT', 'YOUR_SUPABASE_URL', 'YOUR_ANON_KEY'];
+const looksUnconfigured =
+  placeholders.includes(cfg.supabaseUrl) ||
+  placeholders.includes(cfg.supabaseAnonKey) ||
+  /YOUR[-_]/i.test(cfg.supabaseUrl || '') ||
+  /YOUR[-_]/i.test(cfg.supabaseAnonKey || '');
+
+if (looksUnconfigured) {
+  document.getElementById('loginError').textContent =
+    'config.js is not set up yet. Edit config.js with your Supabase URL and anon key.';
+  document.getElementById('loginError').classList.remove('hidden');
+}
+
+const sb = (!looksUnconfigured && window.supabase)
+  ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    })
+  : null;
+
+let allRows = [];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ---- Auth ---- */
+async function checkAuth() {
+  if (!sb) return;
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) showDashboard(data.session.user);
+}
+async function login() {
+  const err = document.getElementById('loginError');
+  err.classList.add('hidden');
+  if (!sb) {
+    err.textContent = 'Not configured. Edit config.js first.';
+    err.classList.remove('hidden');
+    return;
+  }
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) {
+    err.textContent = 'Email and password required.';
+    err.classList.remove('hidden');
+    return;
+  }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    err.textContent = error.message;
+    err.classList.remove('hidden');
+    return;
+  }
+  showDashboard(data.user);
+}
+async function logout() {
+  if (!sb) return;
+  await sb.auth.signOut();
+  document.getElementById('dashView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  document.getElementById('navRight').innerHTML = '';
+}
+function showDashboard(user) {
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('dashView').classList.remove('hidden');
+  document.getElementById('navRight').innerHTML =
+    '<span class="count-pill"><span class="save-dot" style="width:8px;height:8px;border-radius:50%;background:#00D4FF;box-shadow:0 0 10px #00D4FF;"></span>' +
+    (user && user.email ? user.email : 'Signed in') + '</span> ' +
+    '<button class="btn btn-ghost" id="logoutBtn">Sign out</button>';
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+  loadSubmissions();
+}
+
+document.getElementById('loginBtn').addEventListener('click', login);
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+
+/* ---- Data ---- */
+async function loadSubmissions() {
+  if (!sb) return;
+  const listBody = document.getElementById('listBody');
+  listBody.innerHTML = '<div class="list-empty">Loading&hellip;</div>';
+  const { data, error } = await sb
+    .from('journal_submissions')
+    .select('*')
+    .order('submitted_at', { ascending: false });
+  if (error) {
+    listBody.innerHTML = '<div class="list-empty">Error: ' + error.message + '</div>';
+    return;
+  }
+  allRows = data || [];
+  renderStats();
+  renderList();
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadSubmissions);
+
+/* ---- Stats ---- */
+function renderStats() {
+  const grid = document.getElementById('statGrid');
+  const n = allRows.length;
+  const moods = allRows.map(r => r.week_mood).filter(v => typeof v === 'number');
+  const nps = allRows.map(r => r.week_nps).filter(v => typeof v === 'number');
+  const grades = allRows.map(r => r.week_grade).filter(Boolean);
+  const leaving = allRows.map(r => r.considered_leaving).filter(Boolean);
+  const avg = arr => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length).toFixed(1) : '—';
+  const npsScore = (() => {
+    if (!nps.length) return '—';
+    const promoters = nps.filter(v => v >= 9).length;
+    const detractors = nps.filter(v => v <= 6).length;
+    return Math.round(((promoters - detractors) / nps.length) * 100);
+  })();
+  const leavingPct = (() => {
+    if (!leaving.length) return '—';
+    const flagged = leaving.filter(v => v === 'often' || v === 'looking').length;
+    return Math.round((flagged / leaving.length) * 100) + '%';
+  })();
+  const gradeMode = (() => {
+    if (!grades.length) return '—';
+    const counts = {};
+    grades.forEach(g => counts[g] = (counts[g]||0) + 1);
+    return Object.entries(counts).sort((a,b) => b[1]-a[1])[0][0];
+  })();
+
+  grid.innerHTML = `
+    <div class="stat"><div class="stat-label">Submissions</div><div class="stat-value">${n}</div><div class="stat-sub">total received</div></div>
+    <div class="stat"><div class="stat-label">Avg week mood</div><div class="stat-value">${avg(moods)}</div><div class="stat-sub">out of 10</div></div>
+    <div class="stat"><div class="stat-label">eNPS</div><div class="stat-value">${npsScore}</div><div class="stat-sub">recommend USC</div></div>
+    <div class="stat"><div class="stat-label">Common grade</div><div class="stat-value">${gradeMode}</div><div class="stat-sub">most-given grade</div></div>
+    <div class="stat"><div class="stat-label">Flight risk</div><div class="stat-value">${leavingPct}</div><div class="stat-sub">often / actively looking</div></div>
+  `;
+}
+
+/* ---- List with filters ---- */
+function applyFilters() {
+  const role = document.getElementById('filterRole').value;
+  const tenure = document.getElementById('filterTenure').value;
+  const grade = document.getElementById('filterGrade').value;
+  const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+
+  return allRows.filter(r => {
+    if (role && r.role !== role) return false;
+    if (tenure && r.tenure !== tenure) return false;
+    if (grade && r.week_grade !== grade) return false;
+    if (search) {
+      const blob = JSON.stringify(r.payload || {}).toLowerCase();
+      if (!blob.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+['filterRole','filterTenure','filterGrade','filterSearch'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderList);
+  document.getElementById(id).addEventListener('change', renderList);
+});
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function renderList() {
+  const rows = applyFilters();
+  const body = document.getElementById('listBody');
+  document.getElementById('countText').textContent =
+    rows.length + (rows.length === 1 ? ' submission' : ' submissions') +
+    (rows.length !== allRows.length ? ' (filtered)' : '');
+  if (!rows.length) {
+    body.innerHTML = '<div class="list-empty">No submissions yet.</div>';
+    return;
+  }
+  body.innerHTML = rows.map((r, i) => {
+    const dt = new Date(r.submitted_at).toLocaleString();
+    const alias = r.alias ? escapeHtml(r.alias) : '<span class="alias anon">Anonymous</span>';
+    const role = r.role || '—';
+    const grade = r.week_grade || '—';
+    const nps = r.week_nps != null ? r.week_nps : '—';
+    const fr = (r.payload && r.payload.wrap && r.payload.wrap.frustrations) || '';
+    const preview = escapeHtml(fr.split('\n')[0].slice(0, 90)) + (fr.length > 90 ? '…' : '');
+    return `
+      <div class="list-row" data-id="${r.id}">
+        <div class="id-chip">${i+1}</div>
+        <div class="id-chip">${dt}</div>
+        <div class="alias">${alias}</div>
+        <div>${escapeHtml(role)}</div>
+        <div class="grade">${escapeHtml(grade)}</div>
+        <div class="nps">${nps}</div>
+        <div style="color: var(--usc-text-mute);">${preview || '<span style="color:var(--usc-text-faint)">—</span>'}</div>
+      </div>
+    `;
+  }).join('');
+  body.querySelectorAll('.list-row[data-id]').forEach(row => {
+    row.addEventListener('click', () => openDetail(row.dataset.id));
+  });
+}
+
+/* ---- Detail modal ---- */
+function detailQ(label, val, type) {
+  const empty = val == null || val === '' || (Array.isArray(val) && !val.length);
+  let cls = 'a';
+  let html = '';
+  if (empty) { cls += ' empty'; html = '— not answered —'; }
+  else if (type === 'scale') { cls += ' scale'; html = val + ' / 10'; }
+  else if (type === 'chips') {
+    cls += ' chips';
+    const arr = Array.isArray(val) ? val : [val];
+    html = arr.map(v => '<span>' + escapeHtml(v) + '</span>').join('');
+  } else {
+    html = escapeHtml(val);
+  }
+  return `<div class="detail-q"><div class="q">${escapeHtml(label)}</div><div class="${cls}">${html}</div></div>`;
+}
+
+function detailSection(title, items) {
+  const inner = items.map(([label, val, type]) => detailQ(label, val, type)).join('');
+  return `<div class="detail-section"><h3>${escapeHtml(title)}</h3>${inner}</div>`;
+}
+
+function openDetail(id) {
+  const r = allRows.find(x => x.id === id);
+  if (!r) return;
+  const p = r.payload || {};
+  const dt = new Date(r.submitted_at).toLocaleString();
+  const meta = `
+    <div class="detail-meta">
+      <span><b>Submitted:</b> ${escapeHtml(dt)}</span>
+      <span><b>ID:</b> ${escapeHtml(r.id)}</span>
+      <span><b>Alias:</b> ${escapeHtml(r.alias || 'Anonymous')}</span>
+      <span><b>Role:</b> ${escapeHtml(r.role || '—')}</span>
+      <span><b>Tenure:</b> ${escapeHtml(r.tenure || '—')}</span>
+      <span><b>Shift:</b> ${escapeHtml(r.shift || '—')}</span>
+    </div>
+  `;
+
+  // Daily blocks
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let daysHtml = '';
+  if (p.day) {
+    for (let d = 1; d <= 7; d++) {
+      const day = p.day[d];
+      if (!day) continue;
+      const anything = ['mood','energy','workload','stress','wins','frustrations','team','blockers','oneline']
+        .some(k => day[k] != null && day[k] !== '' && !(Array.isArray(day[k]) && !day[k].length));
+      if (!anything) continue;
+      daysHtml += `
+        <div class="day-block">
+          <div class="day-h">Day ${d} &middot; ${dayNames[d-1]}</div>
+          ${detailQ('Mood', day.mood, 'scale')}
+          ${detailQ('Energy', day.energy, 'scale')}
+          ${detailQ('Workload', day.workload)}
+          ${detailQ('Stress', day.stress)}
+          ${detailQ('What went well', day.wins)}
+          ${detailQ('Frustrations', day.frustrations)}
+          ${detailQ('Team note', day.team)}
+          ${detailQ('Blockers', day.blockers)}
+          ${detailQ('One-line vibe', day.oneline)}
+        </div>
+      `;
+    }
+  }
+
+  const dailySection = daysHtml
+    ? `<div class="detail-section"><h3>Daily Check-Ins</h3>${daysHtml}</div>`
+    : `<div class="detail-section"><h3>Daily Check-Ins</h3><p style="color:var(--usc-text-faint); font-style:italic; font-size:13px;">No daily entries.</p></div>`;
+
+  const role = p.role || {};
+  const team = p.team || {};
+  const tools = p.tools || {};
+  const lead = p.lead || {};
+  const cul = p.cul || {};
+  const grow = p.grow || {};
+  const real = p.real || {};
+  const wrap = p.wrap || {};
+
+  const html = meta + dailySection
+    + detailSection('Deep Dive · Role & Responsibilities', [
+        ['Clarity (1–10)', role.clarity, 'scale'],
+        ['What I actually do', role.actual],
+        ['Shadow work', role.shadow],
+        ['Underused strengths', role.strength],
+        ['Most draining', role.drain],
+        ['Redesign wishes', role.redesign, 'chips'],
+        ['Other', role.anything],
+      ])
+    + detailSection('Deep Dive · Team Dynamics', [
+        ['Main collaborators', team.collab],
+        ['Makes job easier', team.easier],
+        ['Makes job harder', team.harder],
+        ['Worst handoffs', team.handoff],
+        ['Team feel', team.feel, 'chips'],
+        ['Unspoken hierarchy', team.hierarchy],
+        ['If trust was 100%', team.iftrust],
+        ['Other', team.anything],
+      ])
+    + detailSection('Deep Dive · Tools & Workflow', [
+        ['Daily tools', tools.daily],
+        ['Slows me down', tools.slow],
+        ['Manual workarounds', tools.manual],
+        ['Would automate', tools.automate],
+        ['Rating · TMS', tools.r1, 'scale'],
+        ['Rating · Tracking', tools.r2, 'scale'],
+        ['Rating · Accounting', tools.r3, 'scale'],
+        ['Rating · Internal comms', tools.r4, 'scale'],
+        ['Process most needing redesign', tools.process],
+        ['Other', tools.anything],
+      ])
+    + detailSection('Deep Dive · Leadership & Direction', [
+        ['Direction clarity (1–10)', lead.direction, 'scale'],
+        ['Trust in leadership (1–10)', lead.trust, 'scale'],
+        ['What Adam does well', lead['adam-good']],
+        ['What Adam should change (the roast)', lead['adam-bad']],
+        ['One thing for Adam', lead['adam-one']],
+        ['Feedback on other leaders', lead.others],
+        ['Leadership descriptors', lead.descriptors, 'chips'],
+        ['Decision to handle differently', lead.decision],
+        ['Other', lead.anything],
+      ])
+    + detailSection('Deep Dive · Culture & Wellbeing', [
+        ['Safety to speak up (1–10)', cul.safe, 'scale'],
+        ['Burnout (1–10)', cul.burn, 'scale'],
+        ['Feeling respected (1–10)', cul.respect, 'scale'],
+        ['Unwritten rule', cul.unwritten],
+        ['Proud moment', cul.proud],
+        ['Doubt moment', cul.doubt],
+        ['Behaviors tolerated that shouldn’t be', cul.tolerate],
+        ['What would make us brag-worthy', cul.brag],
+        ['Other', cul.anything],
+      ])
+    + detailSection('Deep Dive · Growth & Future', [
+        ['Where I want to be in 12 months', grow.year],
+        ['What\u2019s blocking me', grow.block],
+        ['Support that would help', grow.support],
+        ['Compensation fairness (1–10)', grow.comp, 'scale'],
+        ['Considered leaving', grow.leaving],
+        ['What would keep me here', grow.stay],
+        ['Likely reason for leaving', grow.leave],
+        ['Other', grow.anything],
+      ])
+    + detailSection('Deep Dive · The Real Talk', [
+        ['Elephant in the room', real.elephant],
+        ['If I ran USC for a day', real.day],
+        ['Underrated win', real.win],
+        ['Underestimated risk', real.risk],
+        ['How a competitor would beat us', real.beat],
+        ['Sentence someone should say out loud', real.outloud],
+        ['Other', real.anything],
+      ])
+    + detailSection('Wrap-Up · Headlines', [
+        ['Top 3 frustrations', wrap.frustrations],
+        ['Top 3 wins', wrap.wins],
+        ['The ONE thing that has to change', wrap.change],
+        ['The ONE thing that should NOT change', wrap.keep],
+        ['Week grade', wrap.grade],
+        ['Average week mood (1–10)', wrap.mood, 'scale'],
+        ['eNPS — recommend USC (0–10)', wrap.nps, 'scale'],
+        ['Final open mic', wrap.openmic],
+        ['One thing for Adam in private', wrap.toadam],
+      ]);
+
+  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailModal').classList.add('show');
+  document.getElementById('detailModal').scrollTop = 0;
+}
+
+document.getElementById('detailClose').addEventListener('click', () => {
+  document.getElementById('detailModal').classList.remove('show');
+});
+document.getElementById('detailModal').addEventListener('click', (e) => {
+  if (e.target.id === 'detailModal') e.currentTarget.classList.remove('show');
+});
+
+/* ---- Exports ---- */
+function downloadFile(name, mime, content) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+document.getElementById('exportJsonBtn').addEventListener('click', () => {
+  const rows = applyFilters();
+  const date = new Date().toISOString().slice(0,10);
+  downloadFile(`uscargo-submissions-${date}.json`, 'application/json',
+    JSON.stringify({ exported_at: new Date().toISOString(), count: rows.length, rows }, null, 2));
+  showToast('JSON downloaded');
+});
+
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const rows = applyFilters();
+  const date = new Date().toISOString().slice(0,10);
+  // Flatten common fields into CSV
+  const headers = [
+    'id','submitted_at','alias','role','tenure','shift','week_grade','week_mood','week_nps','considered_leaving',
+    'top_frustrations','top_wins','one_thing_change','one_thing_keep','adam_good','adam_bad','adam_one','to_adam_private',
+    'elephant','if_ran_one_day','underrated_win','underestimated_risk',
+  ];
+  const escapeCsv = (v) => {
+    if (v == null) return '';
+    const s = String(v).replace(/"/g, '""');
+    return /[",\r\n]/.test(s) ? '"' + s + '"' : s;
+  };
+  const lines = [headers.join(',')];
+  rows.forEach(r => {
+    const p = r.payload || {};
+    const wrap = p.wrap || {}; const lead = p.lead || {}; const real = p.real || {};
+    lines.push([
+      r.id, r.submitted_at, r.alias || '', r.role || '', r.tenure || '', r.shift || '',
+      r.week_grade || '', r.week_mood ?? '', r.week_nps ?? '', r.considered_leaving || '',
+      wrap.frustrations || '', wrap.wins || '', wrap.change || '', wrap.keep || '',
+      lead['adam-good'] || '', lead['adam-bad'] || '', lead['adam-one'] || '', wrap.toadam || '',
+      real.elephant || '', real.day || '', real.win || '', real.risk || '',
+    ].map(escapeCsv).join(','));
+  });
+  downloadFile(`uscargo-submissions-${date}.csv`, 'text/csv;charset=utf-8', lines.join('\n'));
+  showToast('CSV downloaded');
+});
+
+/* ---- Init ---- */
+checkAuth();
+</script>
+</body>
+</html>

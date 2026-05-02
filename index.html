@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Cargo · Confidential Employee Journal</title>
+<meta name="description" content="A private, week-long reflection space for the US Cargo team. Stays on your device until you submit it." />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+/* =========================================================
+   US CARGO BRAND TOKENS  (matched to the Brand Style Guide)
+   ========================================================= */
+:root {
+  --usc-cyan: #00D4FF;
+  --usc-blue-mid: #5B8FE8;
+  --usc-purple: #B344E5;
+  --usc-dark-bg: #1A1A2E;
+  --usc-dark-bg-2: #12121F;
+  --usc-gradient: linear-gradient(90deg, var(--usc-cyan) 0%, var(--usc-purple) 100%);
+  --usc-gradient-soft: linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(179,68,229,0.10) 100%);
+  --usc-line: rgba(91, 143, 232, 0.22);
+  --usc-line-soft: rgba(91, 143, 232, 0.12);
+  --usc-text: #ffffff;
+  --usc-text-mute: rgba(255,255,255,0.62);
+  --usc-text-faint: rgba(255,255,255,0.38);
+  --usc-font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  --usc-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --usc-btn-radius: 4px;
+  --usc-card-radius: 10px;
+  --usc-input-radius: 6px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--usc-dark-bg);
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(0,212,255,0.07), transparent 60%),
+    radial-gradient(800px 600px at -10% 30%, rgba(179,68,229,0.06), transparent 60%),
+    radial-gradient(1000px 800px at 50% 120%, rgba(91,143,232,0.05), transparent 60%);
+  background-attachment: fixed;
+  font-family: var(--usc-font-family);
+  color: var(--usc-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* faint grid texture */
+body::before{
+  content:'';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(91,143,232,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,143,232,0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(18, 18, 31, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--usc-line);
+  padding: 14px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 14px; }
+.nav-mark {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--usc-gradient);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  color: #0a0a14;
+  box-shadow: 0 0 24px rgba(0,212,255,0.25);
+}
+.nav-wordmark {
+  display: flex; flex-direction: column; line-height: 1;
+}
+.nav-wordmark .top {
+  font-size: 13px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+.nav-wordmark .sub {
+  font-size: 9px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--usc-cyan);
+  margin-top: 4px;
+}
+.nav-tabs {
+  display: flex; gap: 4px; align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--usc-line-soft);
+  padding: 4px;
+  border-radius: 999px;
+}
+.nav-tab {
+  padding: 8px 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--usc-text-faint);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease;
+  font-family: inherit;
+}
+.nav-tab:hover { color: var(--usc-text); }
+.nav-tab.active {
+  color: #0a0a14;
+  background: var(--usc-gradient);
+}
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.save-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--usc-line);
+  background: rgba(0,0,0,0.25);
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--usc-text-mute);
+}
+.save-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--usc-cyan);
+  box-shadow: 0 0 10px var(--usc-cyan);
+}
+.save-pill.dirty .save-dot { background: var(--usc-purple); box-shadow: 0 0 10px var(--usc-purple); }
+
+@media (max-width: 880px) {
+  .nav { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+  .nav-tabs { order: 3; width: 100%; justify-content: center; overflow-x: auto; }
+  .nav-tab { padding: 8px 10px; font-size: 10px; }
+}
+
+/* =========================================================
+   PAGE CONTAINER
+   ========================================================= */
+main {
+  position: relative; z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 56px 32px 120px;
+}
+.page { display: none; animation: fadeUp .5s ease both; }
+.page.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--usc-purple);
+  margin-bottom: 14px;
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.eyebrow::before {
+  content: ''; width: 28px; height: 1px; background: var(--usc-purple);
+}
+
+.h-display {
+  font-weight: 700; font-size: clamp(38px, 6vw, 70px);
+  line-height: 0.96;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-bottom: 18px;
+}
+.h-display .accent {
+  background: var(--usc-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.h-section {
+  font-size: 25px; font-weight: 700; color: var(--usc-cyan);
+  letter-spacing: 0.01em;
+  margin-bottom: 18px;
+}
+.lede {
+  font-size: 14px; line-height: 1.7;
+  color: var(--usc-text-mute);
+  max-width: 640px;
+  margin-bottom: 36px;
+}
+.lede strong { color: var(--usc-text); font-weight: 700; }
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+.card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01)),
+    rgba(18,18,31,0.55);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: var(--usc-card-radius);
+  padding: 32px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.card.with-glow::before {
+  content:''; position: absolute;
+  top:-1px; left:-1px; right:-1px; bottom:-1px;
+  border-radius: var(--usc-card-radius);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.5), rgba(179,68,229,0.4) 50%, rgba(91,143,232,0.0));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none;
+}
+.card-head {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.card-num {
+  font-family: var(--usc-mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--usc-cyan);
+  letter-spacing: 2px;
+}
+.card-title {
+  font-size: 22px; font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.card-sub {
+  font-size: 12px; line-height: 1.6;
+  color: var(--usc-text-mute);
+  margin-bottom: 24px;
+  max-width: 620px;
+}
+
+/* =========================================================
+   FORMS
+   ========================================================= */
+.field { margin-bottom: 22px; }
+.field-label {
+  display: block;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--usc-blue-mid);
+  margin-bottom: 10px;
+}
+.field-help {
+  font-size: 11px; color: var(--usc-text-faint);
+  margin-top: 6px; line-height: 1.5;
+}
+
+input[type="text"], input[type="email"],
+textarea, select {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: var(--usc-input-radius);
+  color: var(--usc-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  resize: vertical;
+}
+textarea { min-height: 100px; }
+textarea.tall { min-height: 140px; }
+input::placeholder, textarea::placeholder { color: var(--usc-text-faint); }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--usc-cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.12);
+  background: rgba(0,0,0,0.4);
+}
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--usc-cyan) 50%),
+                    linear-gradient(135deg, var(--usc-cyan) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 44px;
+}
+select option { background: var(--usc-dark-bg); color: var(--usc-text); }
+
+/* chip group (multi/single select) */
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 9px 14px;
+  border: 1px solid var(--usc-line);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.2);
+  font-size: 12px; font-weight: 700;
+  color: var(--usc-text-mute);
+  cursor: pointer;
+  transition: all .2s ease;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+}
+.chip:hover { border-color: var(--usc-cyan); color: var(--usc-text); }
+.chip.active {
+  background: var(--usc-gradient);
+  color: #0a0a14;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(0,212,255,0.25);
+}
+
+/* mood / energy slider */
+.scale {
+  margin-top: 6px;
+}
+.scale-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+.scale-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: var(--usc-gradient);
+  width: 50%;
+  transition: width .25s ease;
+}
+.scale-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0; padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.scale-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--usc-cyan);
+  box-shadow: 0 0 14px rgba(0,212,255,0.6);
+  margin-top: -7px;
+  cursor: grab;
+}
+.scale-input::-moz-range-thumb {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--usc-cyan);
+  box-shadow: 0 0 14px rgba(0,212,255,0.6);
+  cursor: grab;
+}
+.scale-row {
+  position: relative;
+  margin: 22px 0 8px;
+}
+.scale-legend {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--usc-text-faint);
+  text-transform: uppercase; letter-spacing: 2px;
+  font-weight: 700;
+  margin-top: 14px;
+}
+.scale-readout {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  font-family: var(--usc-mono);
+  margin-bottom: 4px;
+}
+.scale-readout .num {
+  font-size: 28px; font-weight: 700;
+  background: var(--usc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scale-readout .of {
+  font-size: 11px; color: var(--usc-text-faint);
+  letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* =========================================================
+   DAY TABS
+   ========================================================= */
+.daystrip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.daytab {
+  position: relative;
+  padding: 14px 8px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s ease;
+  text-align: center;
+  font-family: inherit;
+}
+.daytab:hover { border-color: var(--usc-cyan); }
+.daytab.active {
+  background: var(--usc-gradient-soft);
+  border-color: var(--usc-cyan);
+  box-shadow: 0 0 0 1px var(--usc-cyan), 0 6px 20px rgba(0,212,255,0.15);
+}
+.daytab .dnum {
+  font-family: var(--usc-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  color: var(--usc-blue-mid);
+  display: block;
+  margin-bottom: 4px;
+}
+.daytab .dname {
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--usc-text);
+}
+.daytab .dstate {
+  position: absolute; top: 8px; right: 8px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+}
+.daytab.has-entry .dstate {
+  background: var(--usc-cyan);
+  box-shadow: 0 0 8px var(--usc-cyan);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.btn {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--usc-btn-radius);
+  cursor: pointer;
+  transition: all .25s ease;
+  border: none;
+  padding: 13px 22px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-primary {
+  background: var(--usc-gradient);
+  color: #0a0a14;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,212,255,0.35);
+}
+.btn-secondary {
+  background: transparent;
+  border: 2px solid var(--usc-cyan);
+  color: var(--usc-cyan);
+  padding: 11px 20px;
+}
+.btn-secondary:hover {
+  background: rgba(0,212,255,0.08);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--usc-text-mute);
+  border: 1px solid var(--usc-line);
+  padding: 11px 18px;
+}
+.btn-ghost:hover { color: #fff; border-color: var(--usc-text); }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* =========================================================
+   PROGRESS RING
+   ========================================================= */
+.progress-card {
+  display: flex; align-items: center; gap: 22px;
+  padding: 22px 26px;
+  background: var(--usc-gradient-soft);
+  border: 1px solid var(--usc-line);
+  border-radius: var(--usc-card-radius);
+  margin-bottom: 28px;
+}
+.progress-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+.progress-ring svg { transform: rotate(-90deg); }
+.progress-ring .pct {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-family: var(--usc-mono);
+  font-size: 13px; font-weight: 700;
+  color: var(--usc-cyan);
+}
+.progress-text .top {
+  font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--usc-blue-mid);
+  margin-bottom: 4px;
+}
+.progress-text .bot {
+  font-size: 13px; color: var(--usc-text-mute);
+}
+
+/* =========================================================
+   CALLOUT (confidentiality, etc.)
+   ========================================================= */
+.callout {
+  border-left: 3px solid var(--usc-cyan);
+  background: rgba(0,212,255,0.05);
+  padding: 18px 22px;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--usc-text-mute);
+  margin-bottom: 24px;
+}
+.callout strong { color: var(--usc-cyan); font-weight: 700; }
+.callout.purple {
+  border-left-color: var(--usc-purple);
+  background: rgba(179,68,229,0.06);
+}
+.callout.purple strong { color: var(--usc-purple); }
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+.toast {
+  position: fixed;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(18,18,31,0.95);
+  border: 1px solid var(--usc-cyan);
+  color: var(--usc-cyan);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity .3s ease, transform .3s ease;
+  z-index: 100;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.4);
+  backdrop-filter: blur(12px);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(10,10,20,0.78);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.modal-backdrop.show { display: flex; animation: fadeUp .25s ease; }
+.modal {
+  background: var(--usc-dark-bg);
+  border: 1px solid var(--usc-line);
+  border-radius: var(--usc-card-radius);
+  padding: 32px;
+  max-width: 480px;
+  width: 100%;
+  position: relative;
+}
+.modal h3 {
+  font-size: 20px; font-weight: 700; color: var(--usc-cyan);
+  margin-bottom: 12px;
+}
+.modal p {
+  font-size: 13px; line-height: 1.6;
+  color: var(--usc-text-mute); margin-bottom: 20px;
+}
+
+/* =========================================================
+   HERO (welcome)
+   ========================================================= */
+.hero {
+  position: relative;
+  padding: 72px 56px;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(600px 350px at 90% 10%, rgba(0,212,255,0.12), transparent 60%),
+    radial-gradient(500px 320px at 10% 90%, rgba(179,68,229,0.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+    rgba(18,18,31,0.6);
+  border: 1px solid var(--usc-line);
+  margin-bottom: 32px;
+}
+.hero .meta-row {
+  display: flex; gap: 28px; flex-wrap: wrap;
+  margin-top: 28px;
+  font-size: 11px; color: var(--usc-text-faint);
+  letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+}
+.hero .meta-row b { color: var(--usc-cyan); }
+
+/* feature grid on welcome */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 28px 0 8px;
+}
+.feat {
+  padding: 22px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 8px;
+}
+.feat-num {
+  font-family: var(--usc-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--usc-purple);
+  margin-bottom: 10px;
+}
+.feat-title {
+  font-size: 14px; font-weight: 700; margin-bottom: 6px;
+}
+.feat-desc {
+  font-size: 12px; color: var(--usc-text-mute);
+  line-height: 1.55;
+}
+
+/* =========================================================
+   DEEP DIVE LIST
+   ========================================================= */
+.dd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.dd-card {
+  padding: 22px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid var(--usc-line-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .25s ease;
+  position: relative;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+.dd-card:hover {
+  border-color: var(--usc-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.25);
+}
+.dd-card .dd-num {
+  font-family: var(--usc-mono);
+  font-size: 10px; font-weight: 700; color: var(--usc-cyan);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  display: block;
+}
+.dd-card .dd-title {
+  font-size: 17px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.dd-card .dd-sub {
+  font-size: 12px; color: var(--usc-text-mute);
+  line-height: 1.5;
+}
+.dd-card .dd-arrow {
+  position: absolute; top: 22px; right: 22px;
+  color: var(--usc-text-faint);
+  font-size: 18px;
+  transition: color .2s ease, transform .2s ease;
+}
+.dd-card:hover .dd-arrow {
+  color: var(--usc-cyan);
+  transform: translateX(4px);
+}
+.dd-card.complete .dd-arrow::after {
+  content: '✓'; color: var(--usc-cyan); margin-left: 8px;
+}
+
+/* =========================================================
+   DD DETAIL
+   ========================================================= */
+.dd-detail { display: none; }
+.dd-detail.active { display: block; }
+.dd-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; border: none;
+  color: var(--usc-text-mute);
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: color .2s ease;
+}
+.dd-back:hover { color: var(--usc-cyan); }
+
+/* footer */
+.foot {
+  margin-top: 64px;
+  padding-top: 28px;
+  border-top: 1px solid var(--usc-line-soft);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--usc-text-faint); font-weight: 700;
+}
+
+/* small helper utility */
+.hr {
+  height: 1px; background: var(--usc-line-soft);
+  margin: 28px 0;
+}
+.row-2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 640px){
+  .row-2 { grid-template-columns: 1fr; }
+  .hero { padding: 44px 28px; }
+  main { padding: 36px 18px 100px; }
+  .card { padding: 22px; }
+  .daystrip { grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .daytab { padding: 10px 4px; }
+  .daytab .dname { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav class="nav">
+  <div class="nav-left">
+    <div class="nav-mark">USC</div>
+    <div class="nav-wordmark">
+      <span class="top">US Cargo</span>
+      <span class="sub">Confidential Journal</span>
+    </div>
+  </div>
+  <div class="nav-tabs" role="tablist">
+    <button class="nav-tab active" data-page="welcome">Start</button>
+    <button class="nav-tab" data-page="daily">Daily</button>
+    <button class="nav-tab" data-page="deep">Deep Dive</button>
+    <button class="nav-tab" data-page="wrap">Wrap-Up</button>
+    <button class="nav-tab" data-page="export">Submit</button>
+  </div>
+  <div class="nav-right">
+    <span class="save-pill" id="savePill">
+      <span class="save-dot"></span>
+      <span id="savePillText">Saved</span>
+    </span>
+  </div>
+</nav>
+
+<main>
+<!-- =========================================================
+     WELCOME PAGE
+     ========================================================= -->
+<section class="page active" id="page-welcome">
+  <div class="hero">
+    <div class="eyebrow">Step 01 · Set the table</div>
+    <h1 class="h-display">This is <span class="accent">your</span><br/>space.</h1>
+    <p class="lede">
+      US Cargo is rebuilding from the ground up &mdash; and the only way that works is if we hear the actual truth.
+      So consider this your <strong>off-the-record notebook</strong> for the week. Write what you'd say if no one
+      could ever trace it back to you. While you write, everything is saved <strong>only on this device</strong>
+      &mdash; nothing leaves your browser. When you're done, you'll click <strong>Submit</strong> and it travels
+      straight to a locked-down database that only the people leading this overhaul can read. No names attached
+      unless you choose to.
+    </p>
+    <div class="btn-row">
+      <button class="btn btn-primary" data-go="daily">Begin the Week &rarr;</button>
+      <button class="btn btn-ghost" id="resetAll">Reset everything</button>
+    </div>
+    <div class="meta-row">
+      <span><b>7 days</b> &middot; daily check-ins</span>
+      <span><b>7 topics</b> &middot; deep dive</span>
+      <span><b>1 wrap-up</b> &middot; the real talk</span>
+      <span><b>0 servers</b> &middot; stays on your device</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>How confidentiality actually works here.</strong> While you're writing, everything is saved to your
+    browser's local storage &mdash; nothing leaves your device automatically. When you're ready, you click
+    <em>Submit</em> on the last tab and your responses travel to a private Supabase database with row-level
+    security: only authenticated reviewers can read submissions, and there's no employee login that could tie
+    you to a row. No analytics, no telemetry, no tracking pixels, no email collected. After submitting you can
+    one-click wipe this browser to leave no trace.
+  </div>
+
+  <div class="callout purple">
+    <strong>And yes &mdash; you can roast Adam.</strong> He's the one who asked for this overhaul, so he's first in
+    line for honest feedback. There's a dedicated section for it. Don't be cruel for cruel's sake &mdash; but don't
+    sugarcoat either. The goal is a better company, not a comfortable one.
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">00 / Optional</span>
+      <h2 class="card-title">Tell us a little about you (or don't)</h2>
+    </div>
+    <p class="card-sub">
+      Every field here is optional. Skip what you want. The only reason to fill any of this in is so future-you
+      knows which entries are yours when you're reviewing your own week. Leave it blank and submit fully anonymously
+      &mdash; the export will just say "Anonymous" at the top.
+    </p>
+    <div class="row-2">
+      <div class="field">
+        <label class="field-label" for="f-name">First name (or alias)</label>
+        <input type="text" id="f-name" data-key="profile.name" placeholder="e.g. Ash, Robbie, or 'Mystery Driver'" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="f-role">Your role</label>
+        <select id="f-role" data-key="profile.role">
+          <option value="">&mdash; Pick one (optional) &mdash;</option>
+          <option>Operations</option>
+          <option>Carrier Sales</option>
+          <option>Accounting / Finance</option>
+          <option>After-Hours Ops</option>
+          <option>Technology / IT</option>
+          <option>Leadership / Management</option>
+          <option>Intern</option>
+          <option>Personal Assistant / Admin</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label class="field-label" for="f-tenure">How long have you been at US Cargo?</label>
+        <select id="f-tenure" data-key="profile.tenure">
+          <option value="">&mdash; Pick one (optional) &mdash;</option>
+          <option>Less than 6 months</option>
+          <option>6 months &ndash; 1 year</option>
+          <option>1 &ndash; 2 years</option>
+          <option>2 &ndash; 5 years</option>
+          <option>5+ years</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="f-shift">When do you usually work?</label>
+        <select id="f-shift" data-key="profile.shift">
+          <option value="">&mdash; Pick one (optional) &mdash;</option>
+          <option>Standard daytime hours</option>
+          <option>Early shift</option>
+          <option>Late shift</option>
+          <option>Overnight / after-hours</option>
+          <option>Mix / variable</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="feat-num">01</div>
+      <div class="feat-title">Daily check-ins</div>
+      <div class="feat-desc">Mon&ndash;Sun. Two minutes a day. How you felt, what worked, what didn't.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-num">02</div>
+      <div class="feat-title">Deep dive</div>
+      <div class="feat-desc">Seven topics &mdash; role, team, tools, leadership, culture, growth, real talk. Take them in any order.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-num">03</div>
+      <div class="feat-title">Wrap-up</div>
+      <div class="feat-desc">End the week with the highlights, the lowlights, and the one thing that has to change.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-num">04</div>
+      <div class="feat-title">Export when ready</div>
+      <div class="feat-desc">Download a clean text or JSON file. Send it however you want. Or don't. Your call.</div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     DAILY CHECK-IN PAGE
+     ========================================================= -->
+<section class="page" id="page-daily">
+  <div class="eyebrow">Step 02 &middot; Daily Check-In</div>
+  <h1 class="h-display">Day by <span class="accent">day.</span></h1>
+  <p class="lede">
+    Pick whichever day you're on (or back-fill earlier days). Two minutes is enough. The point isn't a perfect
+    write-up &mdash; it's a snapshot of how it actually felt today. Sliders, chips, a few open boxes. Auto-saves as you go.
+  </p>
+
+  <div class="progress-card">
+    <div class="progress-ring">
+      <svg width="64" height="64">
+        <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+        <circle id="ringDaily" cx="32" cy="32" r="26" fill="none" stroke="url(#gradRing)" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="163.36"/>
+        <defs>
+          <linearGradient id="gradRing" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#00D4FF"/>
+            <stop offset="100%" stop-color="#B344E5"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="pct" id="ringDailyPct">0%</div>
+    </div>
+    <div class="progress-text">
+      <div class="top">Daily Progress</div>
+      <div class="bot"><span id="daysFilled">0</span> of 7 days logged</div>
+    </div>
+  </div>
+
+  <div class="daystrip" id="dayStrip">
+    <button class="daytab active" data-day="1"><span class="dnum">01</span><span class="dname">Mon</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="2"><span class="dnum">02</span><span class="dname">Tue</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="3"><span class="dnum">03</span><span class="dname">Wed</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="4"><span class="dnum">04</span><span class="dname">Thu</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="5"><span class="dnum">05</span><span class="dname">Fri</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="6"><span class="dnum">06</span><span class="dname">Sat</span><span class="dstate"></span></button>
+    <button class="daytab" data-day="7"><span class="dnum">07</span><span class="dname">Sun</span><span class="dstate"></span></button>
+  </div>
+
+  <div id="dayPanels"></div>
+</section>
+
+<!-- =========================================================
+     DEEP DIVE PAGE
+     ========================================================= -->
+<section class="page" id="page-deep">
+  <div class="eyebrow">Step 03 &middot; Deep Dive</div>
+  <h1 class="h-display">Seven <span class="accent">topics.</span></h1>
+  <p class="lede">
+    Each card opens its own set of questions. Take them whenever you have the headspace &mdash; not all in one
+    sitting. They're meant to be the long-form companion to your daily entries. The questions are pointed on purpose;
+    if a question doesn't apply to you, skip it.
+  </p>
+
+  <div class="dd-grid" id="ddGrid">
+    <button class="dd-card" data-dd="role">
+      <span class="dd-num">DD / 01</span>
+      <div class="dd-title">Role &amp; Responsibilities</div>
+      <div class="dd-sub">Is what you do every day actually what your job is?</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="team">
+      <span class="dd-num">DD / 02</span>
+      <div class="dd-title">Team Dynamics</div>
+      <div class="dd-sub">Who lifts you up. Who blocks you. The unsaid stuff.</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="tools">
+      <span class="dd-num">DD / 03</span>
+      <div class="dd-title">Tools &amp; Workflow</div>
+      <div class="dd-sub">What's broken in the day-to-day. What you'd build if you could.</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="leadership">
+      <span class="dd-num">DD / 04</span>
+      <div class="dd-title">Leadership &amp; Direction</div>
+      <div class="dd-sub">The Adam section. Roast included. Honest is the assignment.</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="culture">
+      <span class="dd-num">DD / 05</span>
+      <div class="dd-title">Culture &amp; Wellbeing</div>
+      <div class="dd-sub">Do you feel safe speaking up? Are you running on fumes?</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="growth">
+      <span class="dd-num">DD / 06</span>
+      <div class="dd-title">Growth &amp; Future</div>
+      <div class="dd-sub">Where you want to go. What's blocking you. Honest exit thoughts.</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+    <button class="dd-card" data-dd="realtalk">
+      <span class="dd-num">DD / 07</span>
+      <div class="dd-title">The Real Talk</div>
+      <div class="dd-sub">Elephant in the room. The thing nobody says out loud.</div>
+      <span class="dd-arrow">&rarr;</span>
+    </button>
+  </div>
+
+  <!-- ===== Detail panels (one per topic) ===== -->
+
+  <!-- ROLE -->
+  <div class="dd-detail" id="dd-role">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 01</span>
+        <h2 class="card-title">Role &amp; Responsibilities</h2>
+      </div>
+      <p class="card-sub">
+        We want to see if your job description matches your actual job. Spoiler: at most companies, it doesn't.
+        Tell us where the gap is.
+      </p>
+
+      <div class="field">
+        <label class="field-label" for="role-clarity">How clear is your role on a normal day?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="role.clarity">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="role.clarity"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="role.clarity" />
+          <div class="scale-legend"><span>Total fog</span><span>Crystal clear</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="role-actual">What do you actually do day-to-day? Be specific.</label>
+        <textarea id="role-actual" class="tall" data-key="role.actual"
+          placeholder="Walk me through a typical Tuesday. The stuff in the calendar AND the stuff that's not."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="role-shadow">What "shadow work" do you do that no one knows about?</label>
+        <textarea id="role-shadow" data-key="role.shadow"
+          placeholder="The unofficial favors, the firefighting, the cleanup nobody assigned you. The stuff that'd break if you stopped."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="role-strength">What are you genuinely great at that's underused here?</label>
+        <textarea id="role-strength" data-key="role.strength"
+          placeholder="Skills, instincts, side talents. What could you be doing more of?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="role-drain">What part of your job drains you the most?</label>
+        <textarea id="role-drain" data-key="role.drain"
+          placeholder="Specific tasks, meetings, accounts, or processes. The stuff that makes the day feel long."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If you could redesign your role from scratch, you'd&hellip;</label>
+        <div class="chip-group" data-chip-group="role.redesign">
+          <button class="chip" data-val="more-ownership">Have more ownership</button>
+          <button class="chip" data-val="less-multitask">Stop multi-tasking 5 jobs</button>
+          <button class="chip" data-val="clearer-scope">Get a clearer scope</button>
+          <button class="chip" data-val="better-tools">Have better tools</button>
+          <button class="chip" data-val="more-people">Have more people supporting me</button>
+          <button class="chip" data-val="different-role">Honestly, do a different role entirely</button>
+          <button class="chip" data-val="role-good">Honestly, role is fine</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="role-anything">Anything else on the role topic?</label>
+        <textarea id="role-anything" data-key="role.anything"
+          placeholder="Open mic. Anything not covered above."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="dd-detail" id="dd-team">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 02</span>
+        <h2 class="card-title">Team Dynamics</h2>
+      </div>
+      <p class="card-sub">
+        This is the section where being honest feels riskiest &mdash; which is exactly why it's worth doing.
+        Names are fair game. Nothing leaves your browser unless you export.
+      </p>
+
+      <div class="callout">
+        <strong>Quick reminder.</strong> Be specific over vague. "Person X consistently does Y, and it makes Z hard" is
+        a thousand times more useful than "team is bad." We're trying to fix structure, not blame people.
+      </div>
+
+      <div class="field">
+        <label class="field-label">Who do you collaborate with most? (Optional)</label>
+        <textarea data-key="team.collab" placeholder="People, departments, or external partners (carriers, brokers, customers)."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Who consistently makes your job easier? Why?</label>
+        <textarea data-key="team.easier" placeholder="Names + the specific behaviors that help. Quiet MVPs welcome."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Who consistently makes your job harder? Why?</label>
+        <textarea data-key="team.harder" class="tall" placeholder="Names optional but useful. Focus on patterns: handoffs, communication style, missed responsibilities, attitude. Stay specific &mdash; we're looking for fixes, not feuds."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Where are the worst handoff breakdowns?</label>
+        <textarea data-key="team.handoff" placeholder="Carrier sales &harr; ops? Ops &harr; accounting? Day shift &harr; after-hours? Be specific about the ball that gets dropped."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Pick what describes the team right now (multi-select)</label>
+        <div class="chip-group" data-chip-group="team.feel" data-multi="1">
+          <button class="chip" data-val="aligned">Aligned</button>
+          <button class="chip" data-val="siloed">Siloed</button>
+          <button class="chip" data-val="cliquey">Cliquey</button>
+          <button class="chip" data-val="supportive">Supportive</button>
+          <button class="chip" data-val="competitive">Competitive (good)</button>
+          <button class="chip" data-val="competitive-bad">Competitive (bad)</button>
+          <button class="chip" data-val="gossipy">Gossipy</button>
+          <button class="chip" data-val="overworked">Overworked</button>
+          <button class="chip" data-val="checked-out">Checked out</button>
+          <button class="chip" data-val="hungry">Hungry / motivated</button>
+          <button class="chip" data-val="confused">Confused on direction</button>
+          <button class="chip" data-val="pro">Genuinely professional</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Is there an unspoken hierarchy that doesn't match the org chart?</label>
+        <textarea data-key="team.hierarchy" placeholder="Whose word actually moves things? Whose doesn't, even though it's supposed to?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What would the team do if they trusted leadership 100% tomorrow?</label>
+        <textarea data-key="team.iftrust" placeholder="Imagine the trust dial cranked to max. What changes in how people behave, share info, take risks?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else on team dynamics?</label>
+        <textarea data-key="team.anything" placeholder="Open mic."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="dd-detail" id="dd-tools">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 03</span>
+        <h2 class="card-title">Tools &amp; Workflow</h2>
+      </div>
+      <p class="card-sub">
+        We've built a lot in-house, bought a lot off-the-shelf, and duct-taped the rest. Tell us where the
+        seams are showing.
+      </p>
+
+      <div class="field">
+        <label class="field-label">Which tools/systems do you live in every day?</label>
+        <textarea data-key="tools.daily" placeholder="TMS, QBO, MacroPoint, EZLoader, Slack, email, the Kaleesi app, the Vendor Payments tool, Google Drive&hellip; whatever it is."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Which tool slows you down the most? Why?</label>
+        <textarea data-key="tools.slow" class="tall" placeholder="What's clunky, unreliable, or just bad? Specific examples beat general complaints."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's a manual workaround you do because the system doesn't?</label>
+        <textarea data-key="tools.manual" placeholder="Spreadsheets, copy-pasting, screenshots, double-entry, side conversations to confirm what should be automatic."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If you could automate ONE thing tomorrow, what would it be?</label>
+        <textarea data-key="tools.automate" placeholder="The single most boring or repetitive task you'd hand to a robot if you could."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Ratings &mdash; how well do these areas work? (1 = broken, 10 = great)</label>
+        <div class="row-2">
+          <div>
+            <div class="scale-readout"><span class="num" data-readout="tools.r1">5</span><span class="of">TMS / Load mgmt</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="tools.r1"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r1" />
+          </div>
+          <div>
+            <div class="scale-readout"><span class="num" data-readout="tools.r2">5</span><span class="of">Tracking / MacroPoint</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="tools.r2"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r2" />
+          </div>
+          <div>
+            <div class="scale-readout"><span class="num" data-readout="tools.r3">5</span><span class="of">Accounting / billing</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="tools.r3"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r3" />
+          </div>
+          <div>
+            <div class="scale-readout"><span class="num" data-readout="tools.r4">5</span><span class="of">Internal communication</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="tools.r4"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r4" />
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What process at US Cargo most needs a redesign?</label>
+        <textarea data-key="tools.process" placeholder="From load entry to invoice to claims. Where does the wheel keep falling off?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else on tools and workflow?</label>
+        <textarea data-key="tools.anything" placeholder="Open mic."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERSHIP (the Adam section) -->
+  <div class="dd-detail" id="dd-leadership">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 04</span>
+        <h2 class="card-title">Leadership &amp; Direction</h2>
+      </div>
+      <p class="card-sub">
+        Adam asked for this section to exist. He asked for it to be unfiltered. He even said "you can roast me."
+        So here it is. Be honest, be specific, be useful. He's not going to see your name on it.
+      </p>
+
+      <div class="callout purple">
+        <strong>The roast clause.</strong> If something Adam does drives you up a wall &mdash; the way he communicates,
+        the way decisions get made or unmade, the F1 metaphors, whatever &mdash; this is the place to say it. Pair it
+        with what you'd want instead. That's the only rule.
+      </div>
+
+      <div class="field">
+        <label class="field-label">Do you understand where US Cargo is heading?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="lead.direction">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="lead.direction"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="lead.direction" />
+          <div class="scale-legend"><span>Lost at sea</span><span>Pole position</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Do you trust leadership to make the right calls?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="lead.trust">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="lead.trust"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="lead.trust" />
+          <div class="scale-legend"><span>Not really</span><span>Fully</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What does Adam do well as a leader? (Real answer, not flattery.)</label>
+        <textarea data-key="lead.adam-good" placeholder="Where does he genuinely add value? What should he do MORE of?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What does Adam need to stop or change? (The roast.)</label>
+        <textarea data-key="lead.adam-bad" class="tall" placeholder="The actual feedback. Communication style, decision-making, follow-through, prioritization, whatever it is. Be direct &mdash; that's literally why this section exists."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If Adam asked you "what's the one thing I should change about how I lead this company," what's your answer?</label>
+        <textarea data-key="lead.adam-one" placeholder="Just the one thing. The biggest unlock."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Other people in leadership / management positions &mdash; honest feedback?</label>
+        <textarea data-key="lead.others" class="tall" placeholder="Anyone else with authority over you or the team. What works, what doesn't. Specific behaviors, specific patterns."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Pick what describes leadership right now (multi-select)</label>
+        <div class="chip-group" data-chip-group="lead.descriptors" data-multi="1">
+          <button class="chip" data-val="visible">Visible</button>
+          <button class="chip" data-val="absent">Absent</button>
+          <button class="chip" data-val="reactive">Reactive</button>
+          <button class="chip" data-val="strategic">Strategic</button>
+          <button class="chip" data-val="micro">Micro-managing</button>
+          <button class="chip" data-val="hands-off">Too hands-off</button>
+          <button class="chip" data-val="inconsistent">Inconsistent</button>
+          <button class="chip" data-val="fair">Fair</button>
+          <button class="chip" data-val="unfair">Plays favorites</button>
+          <button class="chip" data-val="trust">Trustworthy</button>
+          <button class="chip" data-val="distracted">Distracted</button>
+          <button class="chip" data-val="visionary">Visionary</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What decision in the last 6 months do you wish leadership had handled differently?</label>
+        <textarea data-key="lead.decision" placeholder="Big or small. The one that bugged you."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else on leadership?</label>
+        <textarea data-key="lead.anything" placeholder="Open mic."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- CULTURE -->
+  <div class="dd-detail" id="dd-culture">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 05</span>
+        <h2 class="card-title">Culture &amp; Wellbeing</h2>
+      </div>
+      <p class="card-sub">
+        Forget the poster on the wall. We want the real culture &mdash; the one you experience between meetings.
+      </p>
+
+      <div class="field">
+        <label class="field-label">How safe do you feel speaking up at US Cargo?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="cul.safe">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="cul.safe"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="cul.safe" />
+          <div class="scale-legend"><span>Bite tongue</span><span>Say anything</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">How burnt out are you right now?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="cul.burn">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="cul.burn"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="cul.burn" />
+          <div class="scale-legend"><span>Fresh</span><span>Crispy</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">How respected do you feel by the people you work with?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="cul.respect">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="cul.respect"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="cul.respect" />
+          <div class="scale-legend"><span>Invisible</span><span>Fully seen</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's an unwritten rule at US Cargo?</label>
+        <textarea data-key="cul.unwritten" placeholder="The thing nobody puts in a handbook but everyone learns within their first month."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's a moment in the last 90 days that made you proud to work here?</label>
+        <textarea data-key="cul.proud" placeholder="A win, a save, a moment of clarity, a handled crisis."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's a moment that made you question whether you wanted to stay?</label>
+        <textarea data-key="cul.doubt" placeholder="No need to be diplomatic. The actual moment."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Are there behaviors here that get tolerated that shouldn't be?</label>
+        <textarea data-key="cul.tolerate" class="tall" placeholder="Specific behaviors. We're not asking who &mdash; we're asking what."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What would make this a place people brag about working at?</label>
+        <textarea data-key="cul.brag" placeholder="What's the gap between what we are and what we'd be proud of?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else on culture or wellbeing?</label>
+        <textarea data-key="cul.anything" placeholder="Open mic."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROWTH -->
+  <div class="dd-detail" id="dd-growth">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 06</span>
+        <h2 class="card-title">Growth &amp; Future</h2>
+      </div>
+      <p class="card-sub">
+        Where you want to go, what's in your way, and yes &mdash; whether you're thinking about leaving. We'd
+        rather know now than be surprised later.
+      </p>
+
+      <div class="field">
+        <label class="field-label">Where do you want to be in 12 months?</label>
+        <textarea data-key="grow.year" placeholder="Same role, bigger scope? Different role? Different industry? More money? More time?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's blocking you from getting there?</label>
+        <textarea data-key="grow.block" placeholder="Skills, opportunity, mentorship, comp, role design, time, energy."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What kind of training, mentorship, or support would actually help?</label>
+        <textarea data-key="grow.support" placeholder="Be specific &mdash; "leadership training" is too vague, "shadowing Ash for two weeks on AR processes" is gold."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">How fairly are you compensated relative to what you do?</label>
+        <div class="scale">
+          <div class="scale-readout"><span class="num" data-readout="grow.comp">5</span><span class="of">/ 10</span></div>
+          <div class="scale-track"><div class="scale-fill" data-fill="grow.comp"></div></div>
+          <input type="range" class="scale-input" min="1" max="10" value="5" data-key="grow.comp" />
+          <div class="scale-legend"><span>Underpaid</span><span>Fair / strong</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Have you actively considered leaving in the last 6 months?</label>
+        <div class="chip-group" data-chip-group="grow.leaving">
+          <button class="chip" data-val="no">No, not really</button>
+          <button class="chip" data-val="thought">Thought about it once or twice</button>
+          <button class="chip" data-val="often">Yes, often</button>
+          <button class="chip" data-val="looking">Yes, and I'm actively looking</button>
+          <button class="chip" data-val="skip">Prefer not to answer</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If you stayed, what would have to be true?</label>
+        <textarea data-key="grow.stay" class="tall" placeholder="The conditions that keep you here for the long run."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If you left, what would the reason be?</label>
+        <textarea data-key="grow.leave" placeholder="Hypothetical or real. The honest reason, not the polite one."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else on growth?</label>
+        <textarea data-key="grow.anything" placeholder="Open mic."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- REALTALK -->
+  <div class="dd-detail" id="dd-realtalk">
+    <button class="dd-back" data-back>&larr; Back to topics</button>
+    <div class="card with-glow">
+      <div class="card-head">
+        <span class="card-num">DD / 07</span>
+        <h2 class="card-title">The Real Talk</h2>
+      </div>
+      <p class="card-sub">
+        Last topic. The big swings. The stuff you've thought a hundred times and never said out loud at work.
+      </p>
+
+      <div class="field">
+        <label class="field-label">What's the elephant in the room at US Cargo?</label>
+        <textarea data-key="real.elephant" class="tall" placeholder="The thing everyone notices but nobody addresses."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If you ran US Cargo for a day, what would change tomorrow?</label>
+        <textarea data-key="real.day" class="tall" placeholder="No need to play it safe. What's the move you'd make in your first 24 hours?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's a win we're underrating &mdash; something we should be celebrating more?</label>
+        <textarea data-key="real.win" placeholder="The quiet good things. The trends nobody's pointing at."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What's a risk we're underestimating?</label>
+        <textarea data-key="real.risk" placeholder="The thing that could blow up that no one's planning for."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">If a competitor was going to beat us, how would they do it?</label>
+        <textarea data-key="real.beat" placeholder="The honest version. Where are we soft?"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">One thing you wish someone in this company would just say out loud</label>
+        <textarea data-key="real.outloud" placeholder="The unsaid sentence."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Anything else? This is the last open mic of the deep dive.</label>
+        <textarea data-key="real.anything" class="tall" placeholder="Anything you haven't said yet."></textarea>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     WRAP-UP PAGE
+     ========================================================= -->
+<section class="page" id="page-wrap">
+  <div class="eyebrow">Step 04 &middot; Wrap-Up</div>
+  <h1 class="h-display">End of the <span class="accent">week.</span></h1>
+  <p class="lede">
+    Take ten minutes on Friday (or whenever you wrap your week) and pull the threads together. This is the part
+    leadership will read first &mdash; so think of it as your headline, not your footnote.
+  </p>
+
+  <div class="card with-glow">
+    <div class="card-head">
+      <span class="card-num">WK / 01</span>
+      <h2 class="card-title">The Headlines</h2>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Top 3 frustrations from the week</label>
+      <textarea data-key="wrap.frustrations" class="tall" placeholder="Number them. Be specific. The ones that kept showing up."></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Top 3 wins from the week</label>
+      <textarea data-key="wrap.wins" class="tall" placeholder="Things you (or someone else) pulled off. Big or small."></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">The ONE thing that has to change at US Cargo</label>
+      <textarea data-key="wrap.change" placeholder="If only one thing changes from this whole exercise, make it&hellip;"></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">The ONE thing that absolutely should NOT change</label>
+      <textarea data-key="wrap.keep" placeholder="What's working? What would breaking it kill?"></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">If you had to give US Cargo a grade for the week</label>
+      <div class="chip-group" data-chip-group="wrap.grade">
+        <button class="chip" data-val="A">A</button>
+        <button class="chip" data-val="B">B</button>
+        <button class="chip" data-val="C">C</button>
+        <button class="chip" data-val="D">D</button>
+        <button class="chip" data-val="F">F</button>
+        <button class="chip" data-val="incomplete">Incomplete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">WK / 02</span>
+      <h2 class="card-title">Your overall mood for the week</h2>
+    </div>
+    <div class="field">
+      <label class="field-label">Average week-mood</label>
+      <div class="scale">
+        <div class="scale-readout"><span class="num" data-readout="wrap.mood">5</span><span class="of">/ 10</span></div>
+        <div class="scale-track"><div class="scale-fill" data-fill="wrap.mood"></div></div>
+        <input type="range" class="scale-input" min="1" max="10" value="5" data-key="wrap.mood" />
+        <div class="scale-legend"><span>Rough</span><span>Genuinely good</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">How likely are you to recommend US Cargo as a place to work? (eNPS-style)</label>
+      <div class="scale">
+        <div class="scale-readout"><span class="num" data-readout="wrap.nps">5</span><span class="of">/ 10</span></div>
+        <div class="scale-track"><div class="scale-fill" data-fill="wrap.nps"></div></div>
+        <input type="range" class="scale-input" min="0" max="10" value="5" data-key="wrap.nps" />
+        <div class="scale-legend"><span>0 &middot; Definitely not</span><span>10 &middot; Highly</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">WK / 03</span>
+      <h2 class="card-title">Final open mic</h2>
+    </div>
+    <div class="field">
+      <label class="field-label">Anything you haven't gotten to yet, this is the spot</label>
+      <textarea data-key="wrap.openmic" class="tall" placeholder="Bigger picture. Smaller picture. Random observations. The thing you remembered at 2am. Anything."></textarea>
+    </div>
+    <div class="field">
+      <label class="field-label">If you could tell Adam ONE thing in private, what would it be?</label>
+      <textarea data-key="wrap.toadam" class="tall" placeholder="One sentence. One paragraph. Whatever you want. He'll never know it was you."></textarea>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Almost there.</strong> Once this feels complete to you, head to the <strong>Submit</strong> tab.
+    One click sends it to a private database only US Cargo leadership reviewing this overhaul can read.
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" data-go="export">Go to Submit &rarr;</button>
+    <button class="btn btn-ghost" data-go="daily">Back to Daily</button>
+  </div>
+</section>
+
+<!-- =========================================================
+     SUBMIT / EXPORT PAGE
+     ========================================================= -->
+<section class="page" id="page-export">
+  <div class="eyebrow">Step 05 &middot; Submit</div>
+  <h1 class="h-display">Send it in,<br/><span class="accent">confidentially.</span></h1>
+  <p class="lede">
+    When your week is done, send your journal to US Cargo. It travels straight to a private database that
+    <strong>only leadership reviewing this overhaul can read</strong>. Your name is never automatically attached
+    &mdash; only what you typed in. After submitting, you can clear this browser to leave no trace.
+  </p>
+
+  <div class="callout" id="configBanner" style="display:none;">
+    <strong>Heads up.</strong> This journal hasn't been connected to its backend yet. Until that's set up, the
+    <em>Submit</em> button is disabled &mdash; but you can still download your week as a file using the options
+    further down and hand it in directly. Ask whoever sent you this link if you're not sure who that is.
+  </div>
+
+  <div class="card with-glow">
+    <div class="card-head">
+      <span class="card-num">SUBMIT / 01</span>
+      <h2 class="card-title">Send to US Cargo (recommended)</h2>
+    </div>
+    <p class="card-sub">
+      One click. Your responses are written to a secure Supabase database that's locked down so only authenticated
+      reviewers can read it &mdash; not other employees, not random visitors, not anyone with this link.
+      No IP address, no browser fingerprint, no email is collected with your submission.
+    </p>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="submitJournal">Submit Confidentially &rarr;</button>
+      <span id="submitStatus" class="save-pill" style="display:none;"><span class="save-dot"></span><span id="submitStatusText">Sending&hellip;</span></span>
+    </div>
+    <div id="submitConfirm" style="display:none; margin-top: 22px;">
+      <div class="callout">
+        <strong>Submitted.</strong> Confirmation ID: <code id="confirmId" style="color:var(--usc-cyan); font-family: var(--usc-mono);"></code><br/>
+        Sent at <span id="confirmTime"></span>. Save that ID somewhere if you want to reference your submission later
+        &mdash; once you wipe local data, this is the only trace you'll have that you submitted.
+      </div>
+    </div>
+    <div id="submitError" style="display:none; margin-top: 22px;">
+      <div class="callout purple">
+        <strong>Submission failed.</strong> <span id="submitErrorMsg"></span>
+        Don't lose your work &mdash; use the download options below instead and hand the file in directly.
+      </div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2 class="h-section" style="margin-top: 32px;">Or download a copy</h2>
+  <p class="card-sub" style="max-width: 620px;">
+    Prefer to keep things offline, or want a personal backup? Pick any of these. The file is yours to do whatever
+    you want with &mdash; email it, print it, redact it, archive it.
+  </p>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">DL / 01</span>
+      <h2 class="card-title">Download as plain text</h2>
+    </div>
+    <p class="card-sub">A clean, human-readable transcript. Easiest to read and skim.</p>
+    <button class="btn btn-secondary" id="exportTxt">Download .txt</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">DL / 02</span>
+      <h2 class="card-title">Download as JSON</h2>
+    </div>
+    <p class="card-sub">Structured data, identical shape to what gets submitted to Supabase.</p>
+    <button class="btn btn-secondary" id="exportJson">Download .json</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">DL / 03</span>
+      <h2 class="card-title">Print or save as PDF</h2>
+    </div>
+    <p class="card-sub">Opens your browser print dialog &mdash; choose "Save as PDF" if you want a flat archive.</p>
+    <button class="btn btn-secondary" id="exportPrint">Open print dialog</button>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-num">DL / 04</span>
+      <h2 class="card-title">Done? Clear your data.</h2>
+    </div>
+    <p class="card-sub">
+      Once you've submitted (or exported), you can wipe everything from this browser. Strongly recommended if
+      you're using a shared computer.
+    </p>
+    <button class="btn btn-ghost" id="clearData">Wipe this journal from my browser</button>
+  </div>
+
+  <div class="foot">
+    <span>US Cargo &middot; Confidential Intake &middot; v1.0</span>
+    <span>Built for honesty &middot; Encrypted in transit &middot; Restricted at rest</span>
+  </div>
+</section>
+</main>
+
+<!-- toast -->
+<div class="toast" id="toast">Saved</div>
+
+<!-- modal for confirmations -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Are you sure?</h3>
+    <p id="modalBody">This will erase everything you've written.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="modalConfirm">Yes, do it</button>
+      <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   STATE & STORAGE  (localStorage — fully local, never leaves)
+   ========================================================= */
+const STORAGE_KEY = 'usc-employee-journal-v1';
+const state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    flashSaved();
+  } catch (e) {
+    showToast('Could not save — storage full?');
+  }
+}
+function setVal(key, val) {
+  // dotted key path, e.g. "role.actual" or "day.1.mood"
+  const parts = key.split('.');
+  let obj = state;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!obj[parts[i]] || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length - 1]] = val;
+  saveState();
+}
+function getVal(key, fallback = '') {
+  const parts = key.split('.');
+  let obj = state;
+  for (const p of parts) {
+    if (obj == null || typeof obj !== 'object') return fallback;
+    obj = obj[p];
+  }
+  return obj == null ? fallback : obj;
+}
+
+/* =========================================================
+   PAGE NAVIGATION
+   ========================================================= */
+const pages = document.querySelectorAll('.page');
+const tabs = document.querySelectorAll('.nav-tab');
+function goPage(name) {
+  pages.forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.page === name));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Close any open deep-dive detail when navigating away from deep
+  if (name !== 'deep') {
+    document.querySelectorAll('.dd-detail').forEach(d => d.classList.remove('active'));
+    const ddGrid = document.getElementById('ddGrid');
+    if (ddGrid) ddGrid.style.display = '';
+  }
+}
+tabs.forEach(t => t.addEventListener('click', () => goPage(t.dataset.page)));
+document.querySelectorAll('[data-go]').forEach(btn => {
+  btn.addEventListener('click', () => goPage(btn.dataset.go));
+});
+
+/* =========================================================
+   GENERIC INPUT BINDING (data-key)
+   ========================================================= */
+function bindInput(el) {
+  const key = el.dataset.key;
+  if (!key) return;
+  // populate
+  const v = getVal(key, '');
+  if (v !== '' && v != null) el.value = v;
+  // listen
+  const handler = () => {
+    let val = el.value;
+    if (el.type === 'range') val = Number(val);
+    setVal(key, val);
+    if (el.type === 'range') updateScaleVisuals(key, Number(val));
+  };
+  el.addEventListener('input', handler);
+  el.addEventListener('change', handler);
+  // initial scale visuals
+  if (el.type === 'range') updateScaleVisuals(key, Number(el.value));
+}
+
+function updateScaleVisuals(key, val) {
+  document.querySelectorAll('[data-readout="' + key + '"]').forEach(n => n.textContent = val);
+  document.querySelectorAll('[data-fill="' + key + '"]').forEach(f => {
+    const input = document.querySelector('input[data-key="' + key + '"]');
+    if (!input) return;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 10);
+    const pct = ((val - min) / (max - min)) * 100;
+    f.style.width = pct + '%';
+  });
+}
+
+/* =========================================================
+   CHIP GROUPS
+   ========================================================= */
+function bindChipGroups(root = document) {
+  root.querySelectorAll('[data-chip-group]').forEach(group => {
+    const key = group.dataset.chipGroup;
+    const multi = group.dataset.multi === '1';
+    const chips = group.querySelectorAll('.chip');
+    // populate
+    let current = getVal(key, multi ? [] : '');
+    if (multi && !Array.isArray(current)) current = [];
+    chips.forEach(c => {
+      const v = c.dataset.val;
+      const active = multi ? current.includes(v) : current === v;
+      c.classList.toggle('active', active);
+      c.addEventListener('click', () => {
+        if (multi) {
+          let arr = getVal(key, []);
+          if (!Array.isArray(arr)) arr = [];
+          if (arr.includes(v)) arr = arr.filter(x => x !== v);
+          else arr.push(v);
+          setVal(key, arr);
+          c.classList.toggle('active');
+        } else {
+          chips.forEach(x => x.classList.remove('active'));
+          c.classList.add('active');
+          setVal(key, v);
+        }
+      });
+    });
+  });
+}
+
+/* =========================================================
+   DAY PANELS  (build dynamically — same template for each day)
+   ========================================================= */
+const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function buildDayPanel(d) {
+  const id = 'day-panel-' + d;
+  return `
+    <div class="card with-glow day-panel" id="${id}" data-day-panel="${d}">
+      <div class="card-head">
+        <span class="card-num">DAY / ${String(d).padStart(2,'0')} &middot; ${DAY_NAMES[d-1]}</span>
+        <h2 class="card-title">How was today?</h2>
+      </div>
+      <p class="card-sub">All fields optional. Skip anything that doesn't apply. The point is the snapshot, not the essay.</p>
+
+      <div class="row-2">
+        <div class="field">
+          <label class="field-label">Today's mood</label>
+          <div class="scale">
+            <div class="scale-readout"><span class="num" data-readout="day.${d}.mood">5</span><span class="of">/ 10</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="day.${d}.mood"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="day.${d}.mood" />
+            <div class="scale-legend"><span>Rough</span><span>Great</span></div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Today's energy</label>
+          <div class="scale">
+            <div class="scale-readout"><span class="num" data-readout="day.${d}.energy">5</span><span class="of">/ 10</span></div>
+            <div class="scale-track"><div class="scale-fill" data-fill="day.${d}.energy"></div></div>
+            <input type="range" class="scale-input" min="1" max="10" value="5" data-key="day.${d}.energy" />
+            <div class="scale-legend"><span>Drained</span><span>Wired</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label class="field-label">Workload today</label>
+          <div class="chip-group" data-chip-group="day.${d}.workload">
+            <button class="chip" data-val="light">Light / quiet</button>
+            <button class="chip" data-val="steady">Steady</button>
+            <button class="chip" data-val="heavy">Heavy</button>
+            <button class="chip" data-val="chaos">Pure chaos</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Stress level</label>
+          <div class="chip-group" data-chip-group="day.${d}.stress">
+            <button class="chip" data-val="low">Low</button>
+            <button class="chip" data-val="med">Medium</button>
+            <button class="chip" data-val="high">High</button>
+            <button class="chip" data-val="redlining">Redlining</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What went well today?</label>
+        <textarea data-key="day.${d}.wins" placeholder="A win, a good interaction, a problem solved, a quiet moment of competence."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What was frustrating today?</label>
+        <textarea data-key="day.${d}.frustrations" placeholder="The 30 minutes you'll never get back. The bottleneck that should not exist."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Did any team interaction stand out (good or bad)?</label>
+        <textarea data-key="day.${d}.team" placeholder="Optional. Names fine. Specifics help."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">What got in your way today?</label>
+        <textarea data-key="day.${d}.blockers" placeholder="Tools, processes, decisions waiting on someone else, missing info."></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Today's vibe in one line</label>
+        <input type="text" data-key="day.${d}.oneline" placeholder="A single sentence. Headline-style. e.g. 'Fixed three fires, started a fourth.'"/>
+      </div>
+    </div>
+  `;
+}
+
+const dayPanelsHost = document.getElementById('dayPanels');
+if (dayPanelsHost) {
+  let html = '';
+  for (let d = 1; d <= 7; d++) html += buildDayPanel(d);
+  dayPanelsHost.innerHTML = html;
+}
+
+let activeDay = 1;
+function showDay(d) {
+  activeDay = d;
+  document.querySelectorAll('.daytab').forEach(t => t.classList.toggle('active', Number(t.dataset.day) === d));
+  document.querySelectorAll('.day-panel').forEach(p => p.style.display = (Number(p.dataset.dayPanel) === d ? '' : 'none'));
+  refreshDayProgress();
+}
+document.querySelectorAll('.daytab').forEach(tab => {
+  tab.addEventListener('click', () => showDay(Number(tab.dataset.day)));
+});
+
+/* =========================================================
+   PROGRESS — daily ring
+   ========================================================= */
+function dayHasContent(d) {
+  const dayObj = (state.day && state.day[d]) || {};
+  const fields = ['wins','frustrations','team','blockers','oneline'];
+  const anyText = fields.some(f => (dayObj[f] || '').toString().trim().length > 0);
+  const anyChip = !!dayObj.workload || !!dayObj.stress;
+  return anyText || anyChip;
+}
+function refreshDayProgress() {
+  let filled = 0;
+  document.querySelectorAll('.daytab').forEach(t => {
+    const d = Number(t.dataset.day);
+    const has = dayHasContent(d);
+    t.classList.toggle('has-entry', has);
+    if (has) filled++;
+  });
+  const pct = Math.round((filled / 7) * 100);
+  const ring = document.getElementById('ringDaily');
+  const ringPct = document.getElementById('ringDailyPct');
+  const counter = document.getElementById('daysFilled');
+  if (ring) {
+    const C = 2 * Math.PI * 26;
+    ring.setAttribute('stroke-dasharray', C.toFixed(2));
+    ring.setAttribute('stroke-dashoffset', (C * (1 - filled / 7)).toFixed(2));
+  }
+  if (ringPct) ringPct.textContent = pct + '%';
+  if (counter) counter.textContent = filled;
+}
+
+/* =========================================================
+   DEEP DIVE — open/close detail
+   ========================================================= */
+const ddGrid = document.getElementById('ddGrid');
+document.querySelectorAll('.dd-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const k = card.dataset.dd;
+    if (ddGrid) ddGrid.style.display = 'none';
+    document.querySelectorAll('.dd-detail').forEach(d => d.classList.toggle('active', d.id === 'dd-' + k));
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+  });
+});
+document.querySelectorAll('[data-back]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.dd-detail').forEach(d => d.classList.remove('active'));
+    if (ddGrid) ddGrid.style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+function refreshDeepDiveCompletion() {
+  const sections = {
+    role:    ['role.clarity','role.actual','role.shadow','role.strength','role.drain','role.redesign','role.anything'],
+    team:    ['team.collab','team.easier','team.harder','team.handoff','team.feel','team.hierarchy','team.iftrust','team.anything'],
+    tools:   ['tools.daily','tools.slow','tools.manual','tools.automate','tools.process','tools.anything'],
+    leadership:['lead.direction','lead.trust','lead.adam-good','lead.adam-bad','lead.adam-one','lead.others','lead.descriptors','lead.decision','lead.anything'],
+    culture: ['cul.safe','cul.burn','cul.respect','cul.unwritten','cul.proud','cul.doubt','cul.tolerate','cul.brag','cul.anything'],
+    growth:  ['grow.year','grow.block','grow.support','grow.comp','grow.leaving','grow.stay','grow.leave','grow.anything'],
+    realtalk:['real.elephant','real.day','real.win','real.risk','real.beat','real.outloud','real.anything'],
+  };
+  Object.entries(sections).forEach(([k, keys]) => {
+    let any = keys.some(key => {
+      const v = getVal(key, '');
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === 'number') return false; // sliders default — not "filled"
+      return (v || '').toString().trim().length > 0;
+    });
+    const card = document.querySelector('.dd-card[data-dd="' + k + '"]');
+    if (card) card.classList.toggle('complete', any);
+  });
+}
+
+/* =========================================================
+   TOAST + SAVE INDICATOR
+   ========================================================= */
+let saveTimer = null;
+const savePill = document.getElementById('savePill');
+const savePillText = document.getElementById('savePillText');
+function flashSaved() {
+  if (savePill) {
+    savePill.classList.add('dirty');
+    if (savePillText) savePillText.textContent = 'Saving';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      savePill.classList.remove('dirty');
+      if (savePillText) savePillText.textContent = 'Saved';
+      refreshDayProgress();
+      refreshDeepDiveCompletion();
+    }, 350);
+  }
+}
+const toastEl = document.getElementById('toast');
+function showToast(msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+/* =========================================================
+   MODAL helpers
+   ========================================================= */
+const modal = document.getElementById('modal');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const modalConfirm = document.getElementById('modalConfirm');
+const modalCancel = document.getElementById('modalCancel');
+function askConfirm(title, body, onYes) {
+  modalTitle.textContent = title;
+  modalBody.textContent = body;
+  modal.classList.add('show');
+  const cleanup = () => {
+    modal.classList.remove('show');
+    modalConfirm.removeEventListener('click', yes);
+    modalCancel.removeEventListener('click', no);
+  };
+  const yes = () => { cleanup(); onYes(); };
+  const no = () => cleanup();
+  modalConfirm.addEventListener('click', yes);
+  modalCancel.addEventListener('click', no);
+}
+modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
+
+document.getElementById('resetAll').addEventListener('click', () => {
+  askConfirm('Reset everything?', 'This wipes every entry from this browser. There is no undo. Make sure you exported first if you wanted to keep anything.', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  });
+});
+document.getElementById('clearData').addEventListener('click', () => {
+  askConfirm('Wipe this journal?', 'You should only do this AFTER you have exported and confirmed the file is somewhere safe. There is no undo.', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    showToast('Cleared.');
+    setTimeout(() => location.reload(), 800);
+  });
+});
+
+/* =========================================================
+   EXPORTS
+   ========================================================= */
+const ROLE_REDESIGN_LABELS = {
+  'more-ownership':'Have more ownership',
+  'less-multitask':'Stop multi-tasking 5 jobs',
+  'clearer-scope':'Get a clearer scope',
+  'better-tools':'Have better tools',
+  'more-people':'Have more people supporting me',
+  'different-role':'Honestly, do a different role entirely',
+  'role-good':'Honestly, role is fine',
+};
+function readableChips(arr, map) {
+  if (!Array.isArray(arr)) return arr || '';
+  return arr.map(v => (map && map[v]) || v).join(', ');
+}
+
+function buildTextExport() {
+  const profile = state.profile || {};
+  const name = profile.name || 'Anonymous';
+  const role = profile.role || '—';
+  const tenure = profile.tenure || '—';
+  const shift = profile.shift || '—';
+  const dt = new Date().toISOString().slice(0,10);
+  const lines = [];
+
+  const rule = (c='─') => c.repeat(72);
+  const head = (t) => { lines.push(''); lines.push(t.toUpperCase()); lines.push(rule()); };
+  const sub  = (t) => { lines.push(''); lines.push('  ' + t); };
+  const kv   = (k, v) => { if (v === undefined || v === null || v === '' || (Array.isArray(v) && v.length===0)) return;
+                            lines.push('  · ' + k + ': ' + (Array.isArray(v) ? v.join(', ') : v)); };
+  const para = (k, v) => { if (!v) return; lines.push('  · ' + k + ':'); v.toString().split('\n').forEach(line => lines.push('      ' + line)); };
+
+  lines.push('US CARGO BROKERS — CONFIDENTIAL EMPLOYEE JOURNAL');
+  lines.push(rule('═'));
+  lines.push('Submitted: ' + dt);
+  lines.push('Name/Alias: ' + name);
+  lines.push('Role: ' + role);
+  lines.push('Tenure: ' + tenure);
+  lines.push('Shift: ' + shift);
+
+  // Daily
+  head('Daily Check-Ins');
+  for (let d = 1; d <= 7; d++) {
+    const day = (state.day && state.day[d]) || {};
+    if (!dayHasContent(d) && (day.mood == null && day.energy == null)) continue;
+    sub('Day ' + d + ' — ' + DAY_NAMES[d-1]);
+    kv('Mood', day.mood);
+    kv('Energy', day.energy);
+    kv('Workload', day.workload);
+    kv('Stress', day.stress);
+    para('What went well', day.wins);
+    para('Frustrations', day.frustrations);
+    para('Team note', day.team);
+    para('Blockers', day.blockers);
+    kv('One-line vibe', day.oneline);
+  }
+
+  // Deep dive — Role
+  head('Deep Dive · Role & Responsibilities');
+  kv('Clarity (1–10)', getVal('role.clarity'));
+  para('What I actually do', getVal('role.actual'));
+  para('Shadow work', getVal('role.shadow'));
+  para('Underused strengths', getVal('role.strength'));
+  para('Most draining', getVal('role.drain'));
+  kv('Redesign wishes', readableChips(getVal('role.redesign', []), ROLE_REDESIGN_LABELS));
+  para('Other (role)', getVal('role.anything'));
+
+  // Team
+  head('Deep Dive · Team Dynamics');
+  para('Main collaborators', getVal('team.collab'));
+  para('Makes job easier', getVal('team.easier'));
+  para('Makes job harder', getVal('team.harder'));
+  para('Worst handoffs', getVal('team.handoff'));
+  kv('Team feel (chips)', readableChips(getVal('team.feel', [])));
+  para('Unspoken hierarchy', getVal('team.hierarchy'));
+  para('If trust was 100%', getVal('team.iftrust'));
+  para('Other (team)', getVal('team.anything'));
+
+  // Tools
+  head('Deep Dive · Tools & Workflow');
+  para('Daily tools', getVal('tools.daily'));
+  para('Slows me down', getVal('tools.slow'));
+  para('Manual workarounds', getVal('tools.manual'));
+  para('Would automate', getVal('tools.automate'));
+  kv('Rating · TMS', getVal('tools.r1'));
+  kv('Rating · Tracking', getVal('tools.r2'));
+  kv('Rating · Accounting', getVal('tools.r3'));
+  kv('Rating · Internal comms', getVal('tools.r4'));
+  para('Process most needing redesign', getVal('tools.process'));
+  para('Other (tools)', getVal('tools.anything'));
+
+  // Leadership
+  head('Deep Dive · Leadership & Direction');
+  kv('Direction clarity (1–10)', getVal('lead.direction'));
+  kv('Trust in leadership (1–10)', getVal('lead.trust'));
+  para('What Adam does well', getVal('lead.adam-good'));
+  para('What Adam should change (the roast)', getVal('lead.adam-bad'));
+  para('The one thing for Adam', getVal('lead.adam-one'));
+  para('Other leaders — feedback', getVal('lead.others'));
+  kv('Leadership descriptors', readableChips(getVal('lead.descriptors', [])));
+  para('Decision I would have handled differently', getVal('lead.decision'));
+  para('Other (leadership)', getVal('lead.anything'));
+
+  // Culture
+  head('Deep Dive · Culture & Wellbeing');
+  kv('Safety to speak up (1–10)', getVal('cul.safe'));
+  kv('Burnout (1–10)', getVal('cul.burn'));
+  kv('Feeling respected (1–10)', getVal('cul.respect'));
+  para('Unwritten rule', getVal('cul.unwritten'));
+  para('Proud moment', getVal('cul.proud'));
+  para('Doubt moment', getVal('cul.doubt'));
+  para('Behaviors tolerated that shouldn’t be', getVal('cul.tolerate'));
+  para('What would make us brag-worthy', getVal('cul.brag'));
+  para('Other (culture)', getVal('cul.anything'));
+
+  // Growth
+  head('Deep Dive · Growth & Future');
+  para('Where I want to be in 12 months', getVal('grow.year'));
+  para('What\'s blocking me', getVal('grow.block'));
+  para('Support that would help', getVal('grow.support'));
+  kv('Compensation fairness (1–10)', getVal('grow.comp'));
+  kv('Considered leaving', getVal('grow.leaving'));
+  para('What would keep me here', getVal('grow.stay'));
+  para('Likely reason for leaving', getVal('grow.leave'));
+  para('Other (growth)', getVal('grow.anything'));
+
+  // Real talk
+  head('Deep Dive · The Real Talk');
+  para('Elephant in the room', getVal('real.elephant'));
+  para('If I ran USC for a day', getVal('real.day'));
+  para('Underrated win', getVal('real.win'));
+  para('Underestimated risk', getVal('real.risk'));
+  para('How a competitor would beat us', getVal('real.beat'));
+  para('Sentence someone should say out loud', getVal('real.outloud'));
+  para('Other (real talk)', getVal('real.anything'));
+
+  // Wrap-up
+  head('Wrap-Up · Headlines');
+  para('Top 3 frustrations', getVal('wrap.frustrations'));
+  para('Top 3 wins', getVal('wrap.wins'));
+  para('The ONE thing that has to change', getVal('wrap.change'));
+  para('The ONE thing that should NOT change', getVal('wrap.keep'));
+  kv('Week grade', getVal('wrap.grade'));
+  kv('Average week mood (1–10)', getVal('wrap.mood'));
+  kv('eNPS — recommend USC (0–10)', getVal('wrap.nps'));
+  para('Final open mic', getVal('wrap.openmic'));
+  para('One thing for Adam in private', getVal('wrap.toadam'));
+
+  lines.push('');
+  lines.push(rule('═'));
+  lines.push('END OF JOURNAL · CONFIDENTIAL');
+
+  return lines.join('\n');
+}
+
+function downloadFile(name, mime, content) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+document.getElementById('exportTxt').addEventListener('click', () => {
+  const profile = state.profile || {};
+  const slug = (profile.name || 'anonymous').toString().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'anonymous';
+  const date = new Date().toISOString().slice(0,10);
+  downloadFile(`uscargo-journal-${slug}-${date}.txt`, 'text/plain;charset=utf-8', buildTextExport());
+  showToast('Text file downloaded');
+});
+
+document.getElementById('exportJson').addEventListener('click', () => {
+  const profile = state.profile || {};
+  const slug = (profile.name || 'anonymous').toString().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'anonymous';
+  const date = new Date().toISOString().slice(0,10);
+  const payload = {
+    meta: {
+      app: 'US Cargo · Confidential Employee Journal',
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+    },
+    data: state,
+  };
+  downloadFile(`uscargo-journal-${slug}-${date}.json`, 'application/json', JSON.stringify(payload, null, 2));
+  showToast('JSON file downloaded');
+});
+
+document.getElementById('exportPrint').addEventListener('click', () => {
+  // Render the text export into a new window for clean printing
+  const text = buildTextExport();
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Pop-up blocked — allow pop-ups to print'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>US Cargo Journal</title>
+    <style>
+      body{font-family:Helvetica,Arial,sans-serif;color:#1a1a2e;padding:48px;line-height:1.55;font-size:12px;}
+      pre{white-space:pre-wrap;font-family:Helvetica,Arial,sans-serif;}
+      h1{color:#5B8FE8;font-size:18px;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #00D4FF;padding-bottom:8px;}
+      @media print { body { padding: 24px; } }
+    </style></head><body><h1>US Cargo · Confidential Employee Journal</h1><pre>${
+      text.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    }</pre></body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+});
+
+/* =========================================================
+   SUPABASE SUBMIT
+   ========================================================= */
+let supabaseClient = null;
+function initSupabase() {
+  const cfg = window.USC_JOURNAL_CONFIG || {};
+  const url = cfg.supabaseUrl || '';
+  const key = cfg.supabaseAnonKey || '';
+  const placeholders = ['', 'YOUR-PROJECT', 'YOUR_SUPABASE_URL', 'YOUR_ANON_KEY'];
+  const looksUnconfigured =
+    placeholders.includes(url) ||
+    placeholders.includes(key) ||
+    /YOUR[-_]/i.test(url) ||
+    /YOUR[-_]/i.test(key);
+
+  if (looksUnconfigured || typeof window.supabase === 'undefined') {
+    document.getElementById('configBanner').style.display = '';
+    document.getElementById('submitJournal').disabled = true;
+    document.getElementById('submitJournal').style.opacity = '0.5';
+    document.getElementById('submitJournal').style.cursor = 'not-allowed';
+    return;
+  }
+  try {
+    supabaseClient = window.supabase.createClient(url, key, {
+      auth: { persistSession: false },
+    });
+  } catch (e) {
+    console.error('Supabase init failed:', e);
+    document.getElementById('configBanner').style.display = '';
+    document.getElementById('submitJournal').disabled = true;
+  }
+}
+
+async function submitToSupabase() {
+  if (!supabaseClient) return;
+  const btn = document.getElementById('submitJournal');
+  const status = document.getElementById('submitStatus');
+  const statusTxt = document.getElementById('submitStatusText');
+  const confirmBox = document.getElementById('submitConfirm');
+  const errorBox = document.getElementById('submitError');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  status.style.display = '';
+  statusTxt.textContent = 'Sending';
+  errorBox.style.display = 'none';
+  confirmBox.style.display = 'none';
+
+  const profile = state.profile || {};
+  const wrap = state.wrap || {};
+  const grow = state.grow || {};
+
+  const row = {
+    alias: profile.name || null,
+    role: profile.role || null,
+    tenure: profile.tenure || null,
+    shift: profile.shift || null,
+    week_grade: wrap.grade || null,
+    week_mood: typeof wrap.mood === 'number' ? wrap.mood : null,
+    week_nps: typeof wrap.nps === 'number' ? wrap.nps : null,
+    considered_leaving: grow.leaving || null,
+    payload: state,
+  };
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('journal_submissions')
+      .insert([row])
+      .select('id, submitted_at')
+      .single();
+
+    if (error) throw error;
+
+    document.getElementById('confirmId').textContent = data.id;
+    document.getElementById('confirmTime').textContent = new Date(data.submitted_at).toLocaleString();
+    confirmBox.style.display = '';
+    status.style.display = 'none';
+    btn.textContent = 'Resubmit';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+
+    // Mark as submitted in local state (so we can warn about resubmits)
+    setVal('meta.lastSubmitId', data.id);
+    setVal('meta.lastSubmitAt', data.submitted_at);
+
+    showToast('Submitted');
+  } catch (e) {
+    console.error('Submit failed:', e);
+    errorBox.style.display = '';
+    document.getElementById('submitErrorMsg').textContent = (e && e.message) ? e.message : 'Network or server error.';
+    status.style.display = 'none';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function boot() {
+  // bind every input that has data-key
+  document.querySelectorAll('[data-key]').forEach(bindInput);
+  bindChipGroups(document);
+  showDay(1);
+  refreshDayProgress();
+  refreshDeepDiveCompletion();
+  initSupabase();
+
+  const submitBtn = document.getElementById('submitJournal');
+  if (submitBtn) submitBtn.addEventListener('click', submitToSupabase);
+}
+boot();
+</script>
+</body>
+</html>
