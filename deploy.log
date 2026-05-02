@@ -1,6 +1,0 @@
-=== deploy_run.bat run Fri 05/01/2026 23:47:03.54 === 
-remote=https://github.com/Akono88/uscargo-employee-journal.git 
---- removing existing .git --- 
---- git init --- 
-Initialized empty Git repository in D:/Uscargo_journal/.git/
---- git add . --- 

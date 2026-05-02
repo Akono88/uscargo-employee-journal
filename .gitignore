@@ -20,3 +20,9 @@ yarn.lock
 dist/
 build/
 .cache/
+
+# Deploy helpers (local-only)
+deploy.bat
+deploy_run.bat
+deploy_push.bat
+deploy.log

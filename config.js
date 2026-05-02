@@ -20,8 +20,8 @@
  * will be disabled with a clear notice to the employee.
  */
 window.USC_JOURNAL_CONFIG = {
-  supabaseUrl: 'YOUR_SUPABASE_URL',     // e.g. https://abcdefgh.supabase.co
-  supabaseAnonKey: 'YOUR_ANON_KEY',     // the public "anon" key, NOT service_role
+  supabaseUrl: 'https://qnedpzizvocgwvwhhkta.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuZWRweml6dm9jZ3d2d2hoa3RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2OTc2MTEsImV4cCI6MjA5MzI3MzYxMX0.npVCXvN1yk-jd5mS0lhY3jhXLjXq_A83BcNy6U9FdMA',
 
   // Cosmetic only:
   companyName: 'US Cargo Brokers',
