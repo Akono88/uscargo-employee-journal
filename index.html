@@ -317,6 +317,7 @@ select option { background: var(--usc-dark-bg); color: var(--usc-text); }
 /* mood / energy slider */
 .scale {
   margin-top: 6px;
+  position: relative; /* contains the absolutely-positioned .scale-input */
 }
 .scale-track {
   position: relative;
@@ -1170,22 +1171,22 @@ select option { background: var(--usc-dark-bg); color: var(--usc-text); }
       <div class="field">
         <label class="field-label">Ratings &mdash; how well do these areas work? (1 = broken, 10 = great)</label>
         <div class="row-2">
-          <div>
+          <div class="scale">
             <div class="scale-readout"><span class="num" data-readout="tools.r1">5</span><span class="of">TMS / Load mgmt</span></div>
             <div class="scale-track"><div class="scale-fill" data-fill="tools.r1"></div></div>
             <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r1" />
           </div>
-          <div>
+          <div class="scale">
             <div class="scale-readout"><span class="num" data-readout="tools.r2">5</span><span class="of">Tracking / MacroPoint</span></div>
             <div class="scale-track"><div class="scale-fill" data-fill="tools.r2"></div></div>
             <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r2" />
           </div>
-          <div>
+          <div class="scale">
             <div class="scale-readout"><span class="num" data-readout="tools.r3">5</span><span class="of">Accounting / billing</span></div>
             <div class="scale-track"><div class="scale-fill" data-fill="tools.r3"></div></div>
             <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r3" />
           </div>
-          <div>
+          <div class="scale">
             <div class="scale-readout"><span class="num" data-readout="tools.r4">5</span><span class="of">Internal communication</span></div>
             <div class="scale-track"><div class="scale-fill" data-fill="tools.r4"></div></div>
             <input type="range" class="scale-input" min="1" max="10" value="5" data-key="tools.r4" />
